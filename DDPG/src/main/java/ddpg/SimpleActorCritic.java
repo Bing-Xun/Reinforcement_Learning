@@ -5,6 +5,7 @@ import java.util.Random;
 
 // 主程序
 public class SimpleActorCritic {
+
     public static void main(String[] args) {
         // 初始化 Actor 和 Critic
         Actor actor = new Actor(2); // 假設狀態有兩個特徵
@@ -20,7 +21,6 @@ public class SimpleActorCritic {
         double capital = 10000.0; // 初始資金
         double position = 0.0;    // 初始持倉
         double entryPrice = 0.0;  // 買入價格
-        double totalProfit = 0.0; // 累積收益
         boolean holding = false;  // 是否持有
 
         // 生成模擬數據
@@ -37,7 +37,6 @@ public class SimpleActorCritic {
                 // 若持有，判斷賣出時是否有盈利
                 double priceChange = states[i][0] - entryPrice;
                 rewards[i] = priceChange * position;
-                totalProfit += rewards[i];
                 capital += position * states[i][0]; // 更新資金
                 position = 0.0; // 卖出後清空持倉
                 holding = false; // 更新持倉狀態
@@ -58,114 +57,84 @@ public class SimpleActorCritic {
             System.out.println("價格: " + String.format("%.2f", states[i][0]) + ", 成交量: " + (int) states[i][1] + ", 獎勳: " + rewards[i]);
         }
 
-        double gamma = 0.9;
-        double learningRate = 0.01;
-
         System.out.println("== 多次決策與收益模擬 ==");
 
-        double totalReward = 0.0;
-
-        for (int t = 0; t < states.length - 1; t++) {
-            double[] currentState = states[t];
-            double[] nextState = states[t + 1];
-
-            // Actor 模型做出行動預測
-            double action = actor.selectAction(currentState);
-
-            // Critic 模型計算狀態價值與 TD 誤差
-            double nextValue = actor.selectAction(nextState);
-            double value = critic.evaluate(rewards[t], gamma, nextValue);
-            double tdError = value - action;
-
-            // 更新 Actor 的權重
-            actor.updateWeights(currentState, tdError, learningRate);
-
-            // 計算累積收益
-            totalReward += rewards[t];
-
-            System.out.printf("第 %d 次決策:\n", t + 1);
-            System.out.println("狀態: " + Arrays.toString(currentState));
-            System.out.println("行動預測值: " + action);
-            System.out.println("收益: " + rewards[t]);
-            System.out.println("累積收益: " + totalReward);
-            System.out.println("更新後的權重: " + Arrays.toString(actor.weights));
-            System.out.println();
+        for(int i=0; i<30; i++) {
+            test(actor, critic);
         }
-
-        test(actor, critic);
     }
 
     private static void test(Actor actor, Critic critic) {
-        // 初始化隨機數生成器
-        Random random = new Random();
+        // 假設狀態有 2 個特徵（價格和成交量）
+        int stateSize = 2;
+
+        // 假設交易環境設定
+        double capital = 10000.0; // 初始資金
+        double position = 0.0; // 初始持倉
+        double entryPrice = 0.0; // 持倉價格
+        double totalReward = 0.0; // 累積獎勳
+        double gamma = 0.9; // 折扣因子
 
         // 模擬 30 次的價格與成交量波動
-        double[][] testStates = new double[30][2];  // 每個狀態 [價格, 成交量]
-        for (int i = 0; i < testStates.length; i++) {
-            testStates[i][0] = 95 + random.nextDouble() * 10; // 價格在 [95, 105] 範圍內波動
-            testStates[i][1] = 1400 + random.nextInt(400);   // 成交量在 [1400, 1800] 範圍內波動
+        double[][] states = generateStates(30); // 生成隨機狀態
+
+        boolean holding = false; // 是否持倉
+        double[] rewards = new double[30]; // 儲存每筆交易的獎勳
+
+        // 交易邏輯（僅測試，不更新 Actor 或 Critic 的權重）
+        for (int i = 0; i < states.length; i++) {
+            double[] currentState = states[i];
+            double action = actor.selectAction(currentState); // Actor 選擇行動
+            double reward = 0.0;
+
+            // 根據交易行為計算獎勳
+            if (holding) {
+                // 若持有，判斷賣出時是否有盈利
+                double priceChange = currentState[0] - entryPrice;
+                reward = priceChange * position;
+                capital += position * currentState[0]; // 更新資金
+                position = 0.0; // 賣出後清空持倉
+                holding = false; // 更新持倉狀態
+            } else {
+                // 如果沒有持倉，則可以選擇買入
+                if (i > 0 && currentState[0] > states[i - 1][0]) { // 如果價格上漲
+                    position = capital / currentState[0];
+                    entryPrice = currentState[0];
+                    capital = 0.0; // 資金用於買入
+                    holding = true; // 設置持倉狀態為持有
+                }
+            }
+
+            // 計算 Critic 評估（此處僅用作測試）
+            double nextValue = i < states.length - 1 ? actor.selectAction(states[i + 1]) : 0.0; // 下一個狀態的評估
+            double value = critic.evaluate(reward, gamma, nextValue); // 計算 TD(0) 評估值
+
+            // 累積獎勳
+            totalReward += reward;
+
+            // 可選：打印每步的狀態與決策
+//            System.out.printf("第 %d 次交易:\n", i + 1);
+//            System.out.println("狀態: " + currentState[0] + ", " + currentState[1]);
+//            System.out.println("行動預測值: " + action);
+//            System.out.println("收益: " + reward);
+//            System.out.println("累積收益: " + totalReward);
+//            System.out.println();
         }
 
-        // 初始化資金與頭寸
-        double capital = 10000.0; // 初始資金
-        double position = 0.0;    // 初始持倉
-        double entryPrice = 0.0;  // 持倉價格
-        double totalProfit = 0.0; // 累積收益
+        System.out.println("最終資金: " + capital + ", 累積獎勳: " + totalReward);
+    }
 
-        double priceChangeThreshold = 1.0; // 價格波動閾值
+    // 生成 n 個隨機狀態
+    public static double[][] generateStates(int n) {
+        Random random = new Random();
+        double[][] states = new double[n][2]; // 假設每個狀態有 2 個特徵
 
-        // 儲存 Critic 和 Actor 的更新
-        double[] criticValues = new double[testStates.length]; // 每個狀態的價值預測
-        double[] rewards = new double[testStates.length]; // 每個步驟的獎勳
-        double[] tdErrors = new double[testStates.length];  // 時間差分誤差
-
-        System.out.println("== 測試應用（30 次，收益計算） ==");
-
-        for (int i = 0; i < testStates.length; i++) {
-            double[] state = testStates[i];
-            double predictedAction = actor.selectAction(state); // 由 Actor 選擇行為
-            double price = state[0]; // 當前價格
-            double profit = 0.0;     // 單次收益
-
-            // Critic 預測當前狀態的價值
-            criticValues[i] = critic.predictValue(state);
-
-            System.out.printf("PredictedAction: %.2f, ", predictedAction);
-
-            // 行動決策模擬（假設行動值範圍：[0, 1] => 0: SELL, 1: BUY）
-            if (predictedAction > 0.5 && position == 0) { // BUY
-                position = capital / price;  // 購入數量
-                entryPrice = price;          // 記錄買入價格
-                capital = 0.0;               // 消耗資金
-                System.out.printf("狀態 %d: BUY at price %.2f, 持倉 %.2f\n", i + 1, price, position);
-            } else if (predictedAction <= 0.5 && position > 0 && Math.abs(price - entryPrice) >= priceChangeThreshold) { // SELL with threshold
-                profit = (price - entryPrice) * position; // 單次收益
-                capital += price * position;  // 更新資金
-                totalProfit += profit;       // 累積收益
-                position = 0.0;              // 清空持倉
-                System.out.printf("狀態 %d: SELL at price %.2f, 單次收益 %.2f, 累積收益 %.2f\n", i + 1, price, profit, totalProfit);
-            } else {
-                System.out.printf("狀態 %d: HOLD at price %.2f\n", i + 1, price);
-            }
-
-            // 計算獎勳（這裡假設根據價格變化來計算獎勳）
-            if (i > 0) {
-                double priceChange = testStates[i][0] - testStates[i - 1][0];
-                rewards[i] = priceChange * 10; // 簡單獎勳計算
-            } else {
-                rewards[i] = 0;
-            }
-
-            // 計算 TD error
-            if (i > 0) {
-                tdErrors[i] = rewards[i] + criticValues[i] - criticValues[i - 1];  // TD error
-            }
-
-            // 使用 TD error 更新 Critic 權重
-            critic.update(tdErrors[i], 0.01); // 使用 TD error 更新 Critic 權重
+        for (int i = 0; i < n; i++) {
+            // 隨機生成價格和成交量
+            states[i][0] = 95 + random.nextDouble() * 10; // 價格在 [95, 105] 範圍內波動
+            states[i][1] = 1400 + random.nextInt(400);   // 成交量在 [1400, 1800] 範圍內波動
         }
 
-        // 最終資金與收益
-        System.out.printf("最終資金: %.2f, 累積收益: %.2f\n", capital + (position * entryPrice), totalProfit);
+        return states;
     }
 }
