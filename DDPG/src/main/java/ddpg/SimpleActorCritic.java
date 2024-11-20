@@ -6,10 +6,15 @@ import java.util.Random;
 // 主程序
 public class SimpleActorCritic {
 
+    private static double gamma = 0.95;          // 折扣因子
+    private static double actorLearningRate = 0.01;  // Actor 的學習率
+    private static double criticLearningRate = 0.08;  // Critic 的學習率
+
+
     public static void main(String[] args) {
         // 初始化 Actor 和 Critic
-        Actor actor = new Actor(2); // 假設狀態有兩個特徵
-        Critic critic = new Critic();
+        Actor actor = new Actor(2, 3); // 假設狀態有兩個特徵
+        Critic critic = new Critic(2);
 
         // 初始化隨機數生成器
         Random random = new Random();
@@ -31,37 +36,61 @@ public class SimpleActorCritic {
             // 隨機波動價格與成交量
             states[i][0] = basePrice + random.nextDouble() * 5 - 2.5;  // 價格波動範圍
             states[i][1] = baseVolume + random.nextInt(100) - 50;  // 成交量波動範圍
+        }
 
-            // 根據交易行為計算獎勳
+        for (int i = 0; i < numSamples - 1; i++) {
+            double[] currentState = states[i];
+            double[] nextState = states[i + 1];
+
+            // Actor 模型預測行動
+            double action = actor.selectAction(currentState);
+
+            // 根據 Actor 的預測行動執行交易邏輯
+            double reward = 0.0; // 即時獎勵
             if (holding) {
-                // 若持有，判斷賣出時是否有盈利
-                double priceChange = states[i][0] - entryPrice;
-                rewards[i] = priceChange * position;
-                capital += position * states[i][0]; // 更新資金
-                position = 0.0; // 卖出後清空持倉
-                holding = false; // 更新持倉狀態
+                if (action <= 0.5) { // Actor 預測賣出
+                    double priceChange = currentState[0] - entryPrice;
+                    reward = priceChange * position; // 計算收益
+                    capital += position * currentState[0];
+                    position = 0.0; // 清空持倉
+                    holding = false;
+                }
             } else {
-                // 如果沒有持倉，則可以選擇買入
-                if (i > 0 && states[i][0] > states[i - 1][0]) { // 如果價格上漲
-                    position = capital / states[i][0];
-                    entryPrice = states[i][0];
+                if (action > 0.5) { // Actor 預測買入
+                    position = capital / currentState[0];
+                    entryPrice = currentState[0];
                     capital = 0.0; // 資金用於買入
-                    holding = true; // 設置持倉狀態為持有
+                    holding = true;
                 }
             }
-        }
 
-        // 輸出生成的數據與獎勳
-        System.out.println("生成的 50 筆價格與成交量數據，及對應的獎勳：");
-        for (int i = 0; i < states.length; i++) {
-            System.out.println("價格: " + String.format("%.2f", states[i][0]) + ", 成交量: " + (int) states[i][1] + ", 獎勳: " + rewards[i]);
-        }
+            // Critic 計算當前與下一狀態的價值
+            double value = critic.predictValue(currentState);
+            double nextValue = critic.predictValue(nextState);
+
+            // 計算 TD 誤差 (Temporal Difference Error)
+            double tdError = reward + gamma * nextValue - value;
+
+            // 更新 Actor 的權重
+            actor.updateWeights(currentState, tdError, actorLearningRate);
+
+            // 更新 Critic 的權重
+            critic.updateWeights(currentState, tdError, criticLearningRate);
+
+            // 輸出狀態與權重更新
+            System.out.printf("第 %d 次決策:\n", i + 1);
+            System.out.println("狀態: " + Arrays.toString(currentState));
+            System.out.printf("行動: %.2f, TD 誤差: %.2f\n", action, tdError);
+            System.out.println("更新後的 Actor 權重: " + Arrays.toString(actor.getWeights()));
+            System.out.println("更新後的 Critic 權重: " + Arrays.toString(critic.weights));
+            System.out.println();
 
         System.out.println("== 多次決策與收益模擬 ==");
 
-        for(int i=0; i<30; i++) {
-            test(actor, critic);
-        }
+//        for(int i=0; i<30; i++) {
+//            test(actor, critic);
+//        }
+            }
     }
 
     private static void test(Actor actor, Critic critic) {
