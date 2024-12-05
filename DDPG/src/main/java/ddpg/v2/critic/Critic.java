@@ -1,4 +1,4 @@
-package ddpg;
+package ddpg.v2.critic;
 
 import java.util.Arrays;
 

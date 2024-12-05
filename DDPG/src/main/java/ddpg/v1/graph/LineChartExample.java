@@ -1,4 +1,4 @@
-package ddpg.graph;
+package ddpg.v1.graph;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
