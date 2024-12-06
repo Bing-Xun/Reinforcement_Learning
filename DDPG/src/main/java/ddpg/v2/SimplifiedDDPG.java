@@ -4,10 +4,13 @@ import ddpg.v1.SimpleActorCritic;
 import ddpg.v2.actor.DirectionActor;
 import ddpg.v2.actor.VolumeActor;
 import ddpg.v2.critic.Critic;
+import ddpg.v2.graph.ChartDrawer;
+import ddpg.v2.indicators.CalculateKD;
 import ddpg.v2.position.Position;
 import ddpg.v2.util.Utils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SimplifiedDDPG {
@@ -37,7 +40,15 @@ public class SimplifiedDDPG {
         Critic critic = new Critic(STATE_SIZE);
 
 //        double[] state = {100.0, 50.0, 0.3}; // 假設一個初始狀態
-        double[][] states = SimpleActorCritic.getStates(1000);
+        double[][] states = SimpleActorCritic.getStates(100);
+        List<BigDecimal> priceList = new ArrayList<>();
+        for(double[] state : states) {
+            priceList.add(BigDecimal.valueOf(state[0]));
+        }
+
+        List<double[]> kdList = CalculateKD.calculateKDJ(priceList, 3);
+        ChartDrawer.plotPriceAndKDJChart(priceList, kdList);
+
         for(int i=0; i<states.length-1; i++) {
             double[] state = new double[]{states[i][0]};
             double[] nextState = new double[]{states[i+1][0]};
@@ -59,9 +70,7 @@ public class SimplifiedDDPG {
             volumeActor.updateWeights(state, actionProbs, tdError, learningRate);
             critic.updateWeights(state, tdError, criticLearningRate);
 
-            if(i == 100) directionActor.setEpsilon(0.5); // 調整探索率
-            if(i == 200) directionActor.setEpsilon(0.1); // 調整探索率
-            if(i == 500) gamma = 0.1; // 調整探索率
+            updateParam(i, directionActor); // 調整探索率
 
             // 更新持倉跟交易相關
             double profit = position.modifyPosition(BigDecimal.valueOf(state[0]), volume, action);
@@ -119,5 +128,11 @@ public class SimplifiedDDPG {
         }
 
         return tdError;
+    }
+
+    private static void updateParam(int i, DirectionActor directionActor) {
+        if(i == 200) directionActor.setEpsilon(0.5); // 調整探索率
+        if(i == 500) directionActor.setEpsilon(0.1); // 調整探索率
+        if(i == 500) gamma = 0.1;
     }
 }
