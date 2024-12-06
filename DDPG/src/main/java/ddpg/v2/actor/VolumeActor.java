@@ -1,21 +1,25 @@
 package ddpg.v2.actor;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.Random;
 
 public class VolumeActor {
     private double[] weights; // 狀態和方向概率的權重
-    private int inputSize;
     private double epsilon = 0.1;  // ε-greedy 探索率
     static Random random = new Random();
 
     public VolumeActor(int inputSize) {
-        this.inputSize = inputSize;
         this.weights = new double[inputSize];
         // 初始化權重
         for (int i = 0; i < inputSize; i++) {
             weights[i] = random.nextDouble() * 0.1;
         }
+    }
+
+    public static double getMaxPosition(BigDecimal amount, BigDecimal price, double positionCnt) {
+        return Math.max(amount.divide(price, 10, RoundingMode.HALF_UP).doubleValue(), positionCnt);
     }
 
     public double predict(double[] state, double[] actionProbs, double maxPosition) {

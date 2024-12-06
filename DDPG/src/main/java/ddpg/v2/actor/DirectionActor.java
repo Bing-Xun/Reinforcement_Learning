@@ -1,13 +1,19 @@
 package ddpg.v2.actor;
 
+import ddpg.v2.util.Utils;
+
 import java.util.Arrays;
 import java.util.Random;
 
 public class DirectionActor {
     private double[][] weights; // 狀態到行動的權重
     private int stateSize, actionSize;
-    private double epsilon = 0.2;  // ε-greedy 探索率
+    private double epsilon = 0.3;  // ε-greedy 探索率
     static Random random = new Random();
+
+    public void setEpsilon(double epsilon) {
+        this.epsilon = epsilon;
+    }
 
     public DirectionActor(int stateSize, int actionSize) {
         this.stateSize = stateSize;
@@ -39,6 +45,7 @@ public class DirectionActor {
             for (int j = 0; j < stateSize; j++) {
                 actions[i] += state[j] * weights[j][i];
             }
+            actions[i] = Math.tanh(actions[i]);  // 使用 tanh 激活函数
         }
 
         // 找出最大值，避免溢出
@@ -46,6 +53,7 @@ public class DirectionActor {
 
         // 平移並計算指數
         for (int i = 0; i < actionSize; i++) {
+            // 先加小常数避免对零取对数
             actions[i] = Math.exp(actions[i] - maxAction);
             sumExp += actions[i];
         }
@@ -66,23 +74,10 @@ public class DirectionActor {
         for (int i = 0; i < stateSize; i++) {
             for (int j = 0; j < actionSize; j++) {
                 // 策略梯度更新
-                double gradient = (actionProbs[j] - (j == getMaxIndex(actionProbs) ? 1.0 : 0.0)) * state[i];
+
+                double gradient = (actionProbs[j] - (j == Utils.getMaxIndex(actionProbs) ? 1.0 : 0.0)) * state[i];
                 weights[i][j] += learningRate * tdError * gradient;
             }
         }
-    }
-
-    public static int getMaxIndex(double[] array) {
-        int maxIndex = 0; // 假設第一個元素是最大值
-        double maxValue = array[0];
-
-        // 從第二個元素開始比較
-        for (int i = 0; i < array.length; i++) {
-            if (array[i] > maxValue) {
-                maxValue = array[i];
-                maxIndex = i; // 更新最大值的索引
-            }
-        }
-        return maxIndex; // 返回最大值的索引
     }
 }
