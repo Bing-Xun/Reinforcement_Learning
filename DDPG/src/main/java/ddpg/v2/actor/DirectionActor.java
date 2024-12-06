@@ -80,4 +80,9 @@ public class DirectionActor {
             }
         }
     }
+
+    public double[][] getWeights() {
+        System.out.println(Arrays.deepToString(weights));
+        return weights;
+    }
 }

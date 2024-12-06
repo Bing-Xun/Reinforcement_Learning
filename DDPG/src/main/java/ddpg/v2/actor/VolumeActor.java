@@ -57,4 +57,9 @@ public class VolumeActor {
             weights[i] += learningRate * tdError * inputs[i];
         }
     }
+
+    public double[] getWeights() {
+        System.out.println(Arrays.toString(weights));
+        return weights;
+    }
 }

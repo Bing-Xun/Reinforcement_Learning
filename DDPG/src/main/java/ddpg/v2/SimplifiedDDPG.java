@@ -18,15 +18,17 @@ public class SimplifiedDDPG {
     private static double gamma = 0.7; // 折扣因子
     private static double learningRate = 0.01;  // actor 的學習率
     private static double criticLearningRate = 0.01;  // Critic 的學習率
-    private static Position position = new Position();
-    private static double maxReward = 0.0;
-    private static double minReward = 0.0;
-    private static double maxProfit = 0.0;
-    private static double minProfit = 0.0;
 
     public static void main(String[] args) {
+        Position position = new Position();
+        position.setAmount(BigDecimal.valueOf(1000.0)); // 初始化資金
+
+        // 倉位跟展示相關參數
         double totalReward = 0.0;
-        position.setAmount(BigDecimal.valueOf(1000.0));
+        double maxReward = 0.0;
+        double minReward = 0.0;
+        double maxProfit = 0.0;
+        double minProfit = 0.0;
 
         // 初始化 Actor 模型
         DirectionActor directionActor = new DirectionActor(STATE_SIZE, ACTION_SIZE);
@@ -34,10 +36,8 @@ public class SimplifiedDDPG {
         VolumeActor volumeActor = new VolumeActor(STATE_SIZE + ACTION_SIZE);
         Critic critic = new Critic(STATE_SIZE);
 
-
 //        double[] state = {100.0, 50.0, 0.3}; // 假設一個初始狀態
-        double[][] states = SimpleActorCritic.getStates(3000);
-
+        double[][] states = SimpleActorCritic.getStates(1000);
         for(int i=0; i<states.length-1; i++) {
             double[] state = new double[]{states[i][0]};
             double[] nextState = new double[]{states[i+1][0]};
@@ -45,18 +45,14 @@ public class SimplifiedDDPG {
             double[] nextActionProbs = directionActor.predict(nextState); // 預測行動方向的概率
             double volume = volumeActor.predict(state, nextActionProbs, VolumeActor.getMaxPosition(position.getAmount(), BigDecimal.valueOf(state[0]), position.getPositionCnt())); // 基於方向概率計算交易量
             int action = Utils.getMaxIndex(actionProbs);
-            double reward = getReward(state, action, volume, minReward, maxReward);
+            double reward = getReward(position, state, action, volume, minReward, maxReward);
             minReward = minReward > reward ? reward : minReward;
             maxReward = maxReward < reward ? reward : maxReward;
 
             // Critic 的 Q 值
             double currentQValue = critic.predictValue(state); // 當前 Q 值
             double nextQValue = critic.predictValue(nextState); // 下一狀態 Q 值
-            double tdError = reward + gamma * nextQValue - currentQValue; // TD 誤差計算
-            if (Math.abs(tdError) > 1e10) {
-//                System.err.println("tdError 超出範圍：" + tdError);
-                tdError = Math.signum(tdError) * 1e10; // 限制在最大值
-            }
+            double tdError = getTdError(reward, gamma, nextQValue, currentQValue); // TD 誤差計算
 
             // 更新權重
             directionActor.updateWeights(state, actionProbs, tdError, learningRate);
@@ -89,10 +85,13 @@ public class SimplifiedDDPG {
             System.out.printf("最低收益: %.2f\n", minProfit);
             System.out.printf("總收益: %.2f\n", totalReward);
         }
+
+//        directionActor.getWeights();
+//        volumeActor.getWeights();
     }
 
 
-    private static double getReward(double[] state, int action, double volume, double minProfit, double maxProfit) {
+    private static double getReward(Position position, double[] state, int action, double volume, double minProfit, double maxProfit) {
         double reward = 0.0;
 
         if(List.of(0, 1).contains(action) && volume == 0) return -1;
@@ -110,5 +109,15 @@ public class SimplifiedDDPG {
         }
 
         return reward;
+    }
+
+    private static double getTdError(double reward, double gamma, double nextQValue, double currentQValue) {
+        double tdError = reward + gamma * nextQValue - currentQValue; // TD 誤差計算
+        if (Math.abs(tdError) > 1e10) {
+//                System.err.println("tdError 超出範圍：" + tdError);
+            tdError = Math.signum(tdError) * 1e10; // 限制在最大值
+        }
+
+        return tdError;
     }
 }
