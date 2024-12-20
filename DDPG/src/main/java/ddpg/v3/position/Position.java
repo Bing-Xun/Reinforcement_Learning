@@ -27,26 +27,30 @@ public class Position {
         return price;
     }
 
+    private double minProfit;
+
+    private double maxProfit;
+
+
     /**
      *
      * @param side 0:buy, 1:sell, 2:hold
      */
-    public double getPredictReward(BigDecimal price, double positionCnt, Integer side, double mixProfit, double maxProfit) {
-        if(side == 0) {
-            if( positionCnt == 0) return -1;
-            if (amount.compareTo((price.multiply(BigDecimal.valueOf(positionCnt)))) < 0) return -1;
+    public double getPredictReward(BigDecimal price, Integer side) {
+        double profit = 0;
+        double v = 0.0;
 
-            double v = (this.price.subtract(price)).multiply(BigDecimal.valueOf(positionCnt)).doubleValue();
-            return Utils.mapNonLinear(v, mixProfit, maxProfit);
+        if(side == 0) {
+            v = this.price.subtract(price).doubleValue();
         }
 
         if(side == 1) {
-            if (this.positionCnt == 0) return -1;
-            if (this.positionCnt < positionCnt) return -1;
-
-            double v = (price.subtract(this.price)).multiply(BigDecimal.valueOf(positionCnt)).doubleValue();
-            return Utils.mapNonLinear(v, mixProfit, maxProfit);
+            v = price.subtract(this.price).doubleValue();
         }
+
+        profit = Utils.mapNonLinear(v, minProfit, maxProfit);
+        if (profit > maxProfit) maxProfit = profit;
+        if (profit < minProfit) minProfit = profit;
 
         return 0;
     }

@@ -7,7 +7,8 @@ import java.util.Random;
 
 public class ActionActor {
     private double[][] weights; // 狀態到行動的權重
-    private int stateSize, actionSize;
+    private int stateSize;
+    private int actionSize;
     private double epsilon = 0.3;  // ε-greedy 探索率
     static Random random = new Random();
 
@@ -27,45 +28,63 @@ public class ActionActor {
         }
     }
 
-    public double[] predict(double[] state) {
-        if (random.nextDouble() < epsilon) {
-            double[] randomNumbers = new double[actionSize];
-            Random random = new Random();
+    private double[] doEpsilon() {
+        double[] actions = new double[actionSize + 1];  // 增加1个维度用于表示成交量比例
 
-            // 使用 Arrays.setAll 填充隨機數
-            Arrays.setAll(randomNumbers, i -> random.nextDouble());
-            return randomNumbers;
+        Arrays.setAll(actions, i -> random.nextDouble());  // 初始化为随机值
+        double sum = actions[0] + actions[1] + actions[2]; // 前三个值归一化
+        for (int i = 0; i < 3; i++) {
+            actions[i] /= sum;
         }
+        actions[actionSize] = random.nextDouble();  // 随机生成成交量比例
+        return actions;
+    }
 
-        double[] actions = new double[actionSize];
-        double sumExp = 0.0;
+    public double[] predict(double[] state) {
 
-        // 計算線性得分
+        // 随机选择动作
+        if (random.nextDouble() < epsilon) return doEpsilon();
+
+        double[] actions = new double[actionSize + 1];  // 增加1个维度用于表示成交量比例
+
+        // 计算线性得分
+        double[] actionScores = new double[actionSize];
         for (int i = 0; i < actionSize; i++) {
             for (int j = 0; j < stateSize; j++) {
-                actions[i] += state[j] * weights[j][i];
+                actionScores[i] += state[j] * weights[j][i];
             }
-            actions[i] = Math.tanh(actions[i]);  // 使用 tanh 激活函数
+            actionScores[i] = Math.tanh(actionScores[i]);  // 使用 tanh 激活函数
         }
 
         // 找出最大值，避免溢出
-        double maxAction = Arrays.stream(actions).max().orElse(0.0);
+        double maxActionScore = Arrays.stream(actionScores).max().orElse(0.0);
 
-        // 平移並計算指數
+        // 平移并计算指数
+        double sumExp = 0.0;
         for (int i = 0; i < actionSize; i++) {
-            // 先加小常数避免对零取对数
-            actions[i] = Math.exp(actions[i] - maxAction);
-            sumExp += actions[i];
+            actionScores[i] = Math.exp(actionScores[i] - maxActionScore);
+            sumExp += actionScores[i];
         }
 
-        // 檢查 sumExp 並進行歸一化
+        // 归一化概率
         if (sumExp == 0.0) {
-            Arrays.fill(actions, 1.0 / actionSize); // 默認為均勻分布
+            Arrays.fill(actionScores, 1.0 / actionSize); // 默认为均匀分布
         } else {
             for (int i = 0; i < actionSize; i++) {
-                actions[i] /= sumExp;
+                actionScores[i] /= sumExp;
             }
         }
+
+        // 将前三个分数作为动作的概率
+        System.arraycopy(actionScores, 0, actions, 0, actionSize);
+
+        // 添加成交量比例（独立输出）
+        double volume = 0.0;
+        for (int j = 0; j < stateSize; j++) {
+            volume += state[j] * weights[j][actionSize-1];
+        }
+        actions[actionSize] = Math.tanh(volume);  // 归一化到 [-1, 1]
+        actions[actionSize] = Math.abs(actions[actionSize]);  // 取绝对值归一化到 [0, 1]
 
         return actions;
     }

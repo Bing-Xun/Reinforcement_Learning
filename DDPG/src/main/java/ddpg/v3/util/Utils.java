@@ -30,6 +30,6 @@ public class Utils {
         double tanhValue = Math.tanh(normalizedValue); // 使用tanh进行非线性变换
 
         // 步骤 3: 将 tanh 的结果映射到目标区间 [-10, 10]
-        return newMin + (tanhValue + 1) * (newMax - newMin) / 2; // 调整到 [-10, 10] 区间
+        return newMin + tanhValue * (newMax - newMin); // 调整到 [-10, 10] 区间
     }
 }
