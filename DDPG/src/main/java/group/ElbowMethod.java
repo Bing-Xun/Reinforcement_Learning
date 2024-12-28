@@ -143,38 +143,6 @@ public class ElbowMethod {
         return optimalClusters;
     }
 
-//    public static int determineOptimalClusters(double[][] data, int maxClusters) {
-//        List<Double> sseList = new ArrayList<>();
-//        List<Double> dbiList = new ArrayList<>();
-//        double minDBI = Double.MAX_VALUE;
-//        int optimalClusterElbow = 1;
-//        int optimalClusterDBI = 1;
-//
-//        for (int k = 1; k <= maxClusters; k++) {
-//            List<double[][]> clusters = ClusteringUtils.performClustering(data, k);
-//
-//            // 计算 SSE（Elbow Method）
-//            double sse = ClusteringUtils.computeSSE(clusters);
-//            sseList.add(sse);
-//
-//            // 计算 DBI
-//            if (k > 1) {
-//                double dbi = DaviesBouldinIndex.daviesBouldinIndex(clusters);
-//                dbiList.add(dbi);
-//                if (dbi < minDBI) {
-//                    minDBI = dbi;
-//                    optimalClusterDBI = k;
-//                }
-//            }
-//        }
-//
-//        // 找到 Elbow Method 的最佳点
-//        optimalClusterElbow = ClusteringUtils.findElbowPoint(sseList);
-//
-//        // 综合评分，融合结果
-//        return combineResults(optimalClusterElbow, optimalClusterDBI);
-//    }
-
     // 融合结果（可以基于权重、优先级等逻辑）
     private static int combineResults(int elbow, int dbi) {
         // 简单示例：取两者平均值，向下取整

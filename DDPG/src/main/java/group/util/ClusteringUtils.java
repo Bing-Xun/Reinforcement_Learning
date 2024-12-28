@@ -85,18 +85,38 @@ public class ClusteringUtils {
         return sse;
     }
 
+    public static List<Double> smoothSSE(List<Double> sseList, int windowSize) {
+        List<Double> smoothedSSE = new ArrayList<>();
+        for (int i = 0; i < sseList.size(); i++) {
+            double sum = 0.0;
+            int count = 0;
+            for (int j = Math.max(0, i - windowSize); j <= Math.min(sseList.size() - 1, i + windowSize); j++) {
+                sum += sseList.get(j);
+                count++;
+            }
+            smoothedSSE.add(sum / count);
+        }
+        return smoothedSSE;
+    }
 
     // 找到肘部点
     public static int findElbowPoint(List<Double> sseList) {
         int n = sseList.size();
+        if (n < 3) {
+            throw new IllegalArgumentException("SSE list must contain at least 3 points.");
+        }
+
         double maxDistance = 0.0;
         int elbowPoint = 1;
 
+        // 直线起点和终点
         double x1 = 1, y1 = sseList.get(0);
         double x2 = n, y2 = sseList.get(n - 1);
 
-        for (int k = 1; k <= n; k++) {
+        for (int k = 2; k <= n - 1; k++) { // 从第二个点到倒数第二个点
             double x0 = k, y0 = sseList.get(k - 1);
+
+            // 计算点到直线的垂直距离
             double distance = Math.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1) /
                 Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
 

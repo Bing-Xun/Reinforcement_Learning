@@ -22,9 +22,35 @@ public class GMM {
     private static final int MAX_ITERATIONS = 100;
     private static final double CONVERGENCE_THRESHOLD = 1e-4;
 
+    private static double[][] tmp() {
+        return new double[][] {
+            {1.85, 1.82}, {2.88, 1.46}, {1.2, 1.39}, {2.35, 2.37}, {2.58, 1.05},
+            {2.21, 1.69}, {2.32, 2.28}, {1.64, 2.08}, {2.36, 1.38}, {1.82, 2.01},
+            {1.15, 2.62}, {1.81, 1.76}, {1.35, 2.25}, {1.32, 1.63}, {1.12, 2.61},
+            {1.92, 2.21}, {1.08, 1.51}, {1.34, 2.2}, {2.33, 1.5}, {2.62, 3.02},
+            {1.85, 1.83}, {1.55, 2.14}, {3.22, 2.23}, {1.7, 1.93}, {1.53, 2.25},
+            {1.7, 2.56}, {2.19, 1.22}, {2.06, 1.83}, {2.77, 2.28}, {0.97, 1.7},
+            {1.77, 1.58}, {1.65, 2.33}, {2.29, 2.35}, {-5.17, -4.88}, {-4.68, -5.85},
+            {-4.64, -4.93}, {-4.7, -4.72}, {-5.22, -3.99}, {-5.13, -5.22}, {-4.26, -4.84},
+            {-5.28, -4.37}, {-4.77, -5.78}, {-4.39, -5.02}, {-4.98, -4.84}, {-5.16, -4.44},
+            {-3.84, -5.26}, {-5.42, -5.92}, {-4.8, -5.22}, {-5.44, -5.72}, {-3.94, -4.51},
+            {-5.2, -5.31}, {-4.83, -5.47}, {-3.97, -4.79}, {-4.67, -5.22}, {-5.38, -4.3},
+            {-5.53, -4.39}, {-4.98, -5.02}, {-5.39, -5.47}, {-5.55, -4.99}, {-4.8, -4.62},
+            {-3.59, -5.08}, {-5.69, -5.87}, {-4.67, -5.34}, {-5.93, -5.42}, {-3.84, -4.29},
+            {-4.47, -4.87}, {7.39, -3.08}, {6.51, -2.9}, {6.82, -3.2}, {7.0, -3.37},
+            {7.43, -2.84}, {7.49, -3.6}, {6.81, -1.64}, {7.27, -2.54}, {7.47, -3.2},
+            {5.95, -3.93}, {7.14, -2.13}, {6.98, -3.49}, {7.58, -2.64}, {6.58, -2.98},
+            {6.05, -3.41}, {7.06, -2.36}, {6.54, -3.21}, {7.68, -3.86}, {6.79, -3.26},
+            {5.67, -3.18}, {7.1, -3.06}, {6.58, -3.39}, {7.55, -3.45}, {7.94, -1.77},
+            {7.15, -2.88}, {6.9, -2.71}, {7.64, -2.93}, {6.46, -2.36}, {7.55, -2.84},
+            {6.96, -3.14}, {7.04, -2.86}, {6.75, -1.42}, {7.89, -2.52}, {6.32, -3.94}
+        };
+    }
+
     public static void main(String[] args) {
         // 示例数据
-        double[][] data = generateRandomDataPoints(20);
+//        double[][] data = generateRandomDataPoints(20);
+        double[][] data = tmp();
 
         // 使用肘部法则选择簇数
         int numClusters = ClusteringUtils.determineOptimalClusters(data, 30);
@@ -42,7 +68,7 @@ public class GMM {
             throw new RuntimeException(e);
         }
 
-        graph(data, list);
+        graph(list);
     }
 
     public List<List<double[]>> runGMM(double[][] data, int numClusters) {
@@ -212,15 +238,37 @@ public class GMM {
         return Math.exp(exponent) / Math.sqrt(Math.pow(2 * Math.PI, n) * det);
     }
 
-    private static boolean hasConverged(double[][] responsibilities, double[][] centroids, double[][] data) {
-        double threshold = 1e-4;
-        double totalChange = 0;
-        for (int i = 0; i < centroids.length; i++) {
-            totalChange += euclideanDistance(centroids[i], data[i]); // 使用质心和数据点的距离来判断变化
+    private double calculateNewCentroid(int featureIndex, double[][] responsibilities, double[][] data, int clusterIndex) {
+        double numerator = 0.0;
+        double denominator = 0.0;
+
+        for (int i = 0; i < data.length; i++) {
+            numerator += responsibilities[i][clusterIndex] * data[i][featureIndex];
+            denominator += responsibilities[i][clusterIndex];
         }
-        return totalChange < threshold;  // 如果变化小于阈值，则认为收敛
+
+        // 防止分母为零
+        if (denominator == 0.0) {
+            throw new IllegalStateException("Responsibility sum is zero for cluster: " + clusterIndex);
+        }
+
+        return numerator / denominator;
     }
 
+
+    private boolean hasConverged(double[][] responsibilities, double[][] centroids, double[][] data) {
+        double tolerance = 1e-4;
+        double maxChange = 0.0;
+
+        for (int i = 0; i < centroids.length; i++) {
+            for (int j = 0; j < centroids[i].length; j++) {
+                double change = Math.abs(centroids[i][j] - calculateNewCentroid(j, responsibilities, data, i));
+                maxChange = Math.max(maxChange, change);
+            }
+        }
+
+        return maxChange < tolerance;
+    }
 
     private int findMaxIndex(double[] array) {
         int maxIndex = 0;
@@ -263,42 +311,53 @@ public class GMM {
         return result;
     }
 
-    private double determinant(double[][] matrix) {
-        // 简单的行列式计算（略）
-        return 1.0;
+    // 计算矩阵的行列式
+    public double determinant(double[][] matrix) {
+        int n = matrix.length;
+
+        // 如果是 1x1 矩阵，直接返回唯一元素
+        if (n == 1) {
+            return matrix[0][0];
+        }
+
+        // 如果是 2x2 矩阵，使用快速公式
+        if (n == 2) {
+            return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+        }
+
+        // 对于 n > 2，递归展开
+        double det = 0.0;
+        for (int col = 0; col < n; col++) {
+            // 递归计算子矩阵的行列式
+            det += Math.pow(-1, col) * matrix[0][col] * determinant(minor(matrix, 0, col));
+        }
+        return det;
+    }
+
+    // 生成子矩阵（去掉指定行和列后的矩阵）
+    private double[][] minor(double[][] matrix, int row, int col) {
+        int n = matrix.length;
+        double[][] minor = new double[n - 1][n - 1];
+
+        for (int i = 0, mi = 0; i < n; i++) {
+            if (i == row) continue; // 跳过指定行
+
+            for (int j = 0, mj = 0; j < n; j++) {
+                if (j == col) continue; // 跳过指定列
+
+                minor[mi][mj] = matrix[i][j];
+                mj++;
+            }
+            mi++;
+        }
+        return minor;
     }
 
     private static int determineOptimalClusters(double[][] data) {
-        // 使用肘部法则计算最优簇数（这里是示例，假设为3）
-//        return 3;
         return ElbowMethod.determineOptimalClusters(data, 10);
     }
 
-//    private static void graph(double[][] data) {
-//        // 创建数据集
-//        XYSeries series = new XYSeries("Data Points");
-//        for (double[] point : data) {
-//            series.add(point[0], point[1]);
-//        }
-//        XYSeriesCollection dataset = new XYSeriesCollection(series);
-//
-//        // 创建散点图
-//        JFreeChart chart = ChartFactory.createScatterPlot(
-//            "Scatter Plot", // 图表标题
-//            "X-Axis",       // X轴标签
-//            "Y-Axis",       // Y轴标签
-//            dataset          // 数据集
-//        );
-//
-//        // 显示图表
-//        JFrame frame = new JFrame("Scatter Plot Example");
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.add(new ChartPanel(chart));
-//        frame.setSize(800, 600);
-//        frame.setVisible(true);
-//    }
-
-    public static void graph(double[][] data, List<List<double[]>> clusters) {
+    public static void graph(List<List<double[]>> clusters) {
         // 创建数据集
         XYSeriesCollection dataset = new XYSeriesCollection();
 
