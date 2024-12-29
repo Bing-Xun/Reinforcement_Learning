@@ -1,7 +1,9 @@
-package group;
+package group.gmm;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import group.ElbowMethod;
+import group.gmm.vo.GMMVO;
 import group.util.ClusteringUtils;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -20,9 +22,9 @@ import java.util.Random;
 
 public class GMM {
     private static final int MAX_ITERATIONS = 100;
-    private static final double CONVERGENCE_THRESHOLD = 1e-4;
+    private GMMVO gMMVO;
 
-    private static double[][] tmp() {
+    private static double[][] getData() {
         return new double[][] {
             {1.85, 1.82}, {2.88, 1.46}, {1.2, 1.39}, {2.35, 2.37}, {2.58, 1.05},
             {2.21, 1.69}, {2.32, 2.28}, {1.64, 2.08}, {2.36, 1.38}, {1.82, 2.01},
@@ -50,15 +52,20 @@ public class GMM {
     public static void main(String[] args) {
         // 示例数据
 //        double[][] data = generateRandomDataPoints(20);
-        double[][] data = tmp();
+        double[][] data = getData();
 
         // 使用肘部法则选择簇数
         int numClusters = ClusteringUtils.determineOptimalClusters(data, 30);
         System.out.println("numClusters:"+numClusters);
 
         GMM gmm = new GMM();
-        List<List<double[]>> list = gmm.runGMM(data, numClusters);
+        GMMVO vo = gmm.train(data, numClusters);
 
+        double d = predictCluster(new double[]{-4.8, -5.22}, vo);
+        System.out.println("d:"+d);
+
+
+        List<List<double[]>> list = getGrraphList(data, numClusters, vo);
         try {
             // 使用 Jackson 将 List<List<double[]>> 转换为 JSON
             ObjectMapper objectMapper = new ObjectMapper();
@@ -71,7 +78,26 @@ public class GMM {
         graph(list);
     }
 
-    public List<List<double[]>> runGMM(double[][] data, int numClusters) {
+    public static List<List<double[]>> getGrraphList(double[][] data, int numClusters, GMMVO vo) {
+        int numSamples = data.length;
+        double[][] responsibilities = vo.getResponsibilities();
+
+        // 创建一个 List 用于存储每个簇的列表
+        List<List<double[]>> clusters = new ArrayList<>();
+        for (int i = 0; i < numClusters; i++) {
+            clusters.add(new ArrayList<>());  // 每个簇初始化为一个空的 List
+        }
+
+        // 根据每个数据点的责任（responsibility）分配它们到对应的簇
+        for (int i = 0; i < numSamples; i++) {
+            int cluster = findMaxIndex(responsibilities[i]);  // 找到每个数据点所属的簇
+            clusters.get(cluster).add(data[i]);  // 将数据点添加到相应的簇中
+        }
+
+        return clusters;
+    }
+
+    public GMMVO train(double[][] data, int numClusters) {
         int numSamples = data.length;
         int numFeatures = data[0].length;
 
@@ -79,9 +105,11 @@ public class GMM {
         standardizeData(data);
 
         // 2. 初始化簇中心、协方差矩阵和权重
-        double[][] centroids = initializeCentroids(data, numClusters);
-        double[][][] covariances = initializeCovariances(numClusters, numFeatures);
-        double[] weights = initializeWeights(numClusters);
+        GMMVO gMMVO = new GMMVO();
+        gMMVO.init(data, numClusters);
+        double[][] centroids = gMMVO.getCentroids();
+        double[][][] covariances = gMMVO.getCovariances();
+        double[] weights = gMMVO.getWeights();
 
         double[][] responsibilities = new double[numSamples][numClusters];
 
@@ -141,21 +169,42 @@ public class GMM {
             }
         }
 
-        // 创建一个 List 用于存储每个簇的列表
-        List<List<double[]>> clusters = new ArrayList<>();
-        for (int i = 0; i < numClusters; i++) {
-            clusters.add(new ArrayList<>());  // 每个簇初始化为一个空的 List
-        }
+        gMMVO.setCentroids(centroids);
+        gMMVO.setCovariances(covariances);
+        gMMVO.setWeights(weights);
+        gMMVO.setResponsibilities(responsibilities);
 
-        // 根据每个数据点的责任（responsibility）分配它们到对应的簇
-        for (int i = 0; i < numSamples; i++) {
-            int cluster = findMaxIndex(responsibilities[i]);  // 找到每个数据点所属的簇
-            clusters.get(cluster).add(data[i]);  // 将数据点添加到相应的簇中
-        }
-
-        return clusters;
+        return gMMVO;
     }
 
+    public static int predictCluster(double[] x, GMMVO vo) {
+        int numClusters = vo.getCentroids().length;
+        double[] responsibilities = new double[numClusters];
+        double totalProbability = 0;
+
+        // 计算每个簇的责任值
+        for (int k = 0; k < numClusters; k++) {
+            responsibilities[k] = vo.getWeights()[k] * gaussian(x, vo.getCentroids()[k], vo.getCovariances()[k]);
+            totalProbability += responsibilities[k];
+        }
+
+        // 归一化责任值
+        for (int k = 0; k < numClusters; k++) {
+            responsibilities[k] /= totalProbability;
+        }
+
+        // 找到最大责任值对应的簇
+        int maxCluster = 0;
+        double maxResponsibility = responsibilities[0];
+        for (int k = 1; k < numClusters; k++) {
+            if (responsibilities[k] > maxResponsibility) {
+                maxResponsibility = responsibilities[k];
+                maxCluster = k;
+            }
+        }
+
+        return maxCluster;
+    }
 
     private void standardizeData(double[][] data) {
         int numFeatures = data[0].length;
@@ -177,59 +226,9 @@ public class GMM {
         }
     }
 
-    private static double[][] initializeCentroids(double[][] data, int numClusters) {
-        Random random = new Random();
-        double[][] centroids = new double[numClusters][data[0].length];
 
-        // 使用 K-means++ 初始化质心
-        centroids[0] = data[random.nextInt(data.length)];  // 随机选择第一个质心
-        for (int k = 1; k < numClusters; k++) {
-            double[] newCentroid = null;
-            double maxDist = Double.MIN_VALUE;
-            for (double[] point : data) {
-                double minDist = Double.MAX_VALUE;
-                // 计算每个点与现有质心的距离
-                for (int i = 0; i < k; i++) {
-                    double dist = euclideanDistance(point, centroids[i]);
-                    minDist = Math.min(minDist, dist);
-                }
-                // 选择与现有质心距离最远的点作为新的质心
-                if (minDist > maxDist) {
-                    maxDist = minDist;
-                    newCentroid = point;
-                }
-            }
-            centroids[k] = newCentroid;
-        }
-        return centroids;
-    }
 
-    // 计算两点之间的欧几里得距离
-    private static double euclideanDistance(double[] point1, double[] point2) {
-        double sum = 0.0;
-        for (int i = 0; i < point1.length; i++) {
-            sum += Math.pow(point1[i] - point2[i], 2);
-        }
-        return Math.sqrt(sum);
-    }
-
-    private double[][][] initializeCovariances(int numClusters, int numFeatures) {
-        double[][][] covariances = new double[numClusters][numFeatures][numFeatures];
-        for (int k = 0; k < numClusters; k++) {
-            for (int i = 0; i < numFeatures; i++) {
-                covariances[k][i][i] = 1.0;
-            }
-        }
-        return covariances;
-    }
-
-    private double[] initializeWeights(int numClusters) {
-        double[] weights = new double[numClusters];
-        Arrays.fill(weights, 1.0 / numClusters);
-        return weights;
-    }
-
-    private double gaussian(double[] x, double[] mean, double[][] covariance) {
+    private static double gaussian(double[] x, double[] mean, double[][] covariance) {
         int n = x.length;
         double det = determinant(covariance);
         double[] diff = subtract(x, mean);
@@ -270,7 +269,7 @@ public class GMM {
         return maxChange < tolerance;
     }
 
-    private int findMaxIndex(double[] array) {
+    private static int findMaxIndex(double[] array) {
         int maxIndex = 0;
         for (int i = 1; i < array.length; i++) {
             if (array[i] > array[maxIndex]) {
@@ -280,7 +279,7 @@ public class GMM {
         return maxIndex;
     }
 
-    private double[] subtract(double[] a, double[] b) {
+    private static double[] subtract(double[] a, double[] b) {
         double[] result = new double[a.length];
         for (int i = 0; i < a.length; i++) {
             result[i] = a[i] - b[i];
@@ -288,12 +287,73 @@ public class GMM {
         return result;
     }
 
-    private double[][] invertMatrix(double[][] matrix) {
-        // 矩阵求逆（略）
-        return matrix;
+    private static double[][] invertMatrix(double[][] matrix) {
+        int n = matrix.length;
+
+        if (n != matrix[0].length) {
+            throw new IllegalArgumentException("Matrix must be square.");
+        }
+
+        // 初始化单位矩阵
+        double[][] identity = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            identity[i][i] = 1.0;
+        }
+
+        // 拷贝原矩阵（避免修改原矩阵）
+        double[][] copy = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(matrix[i], 0, copy[i], 0, n);
+        }
+
+        // 高斯-约当消元法
+        for (int i = 0; i < n; i++) {
+            // 寻找主元（最大值）
+            int maxRow = i;
+            for (int k = i + 1; k < n; k++) {
+                if (Math.abs(copy[k][i]) > Math.abs(copy[maxRow][i])) {
+                    maxRow = k;
+                }
+            }
+
+            // 交换行
+            double[] temp = copy[i];
+            copy[i] = copy[maxRow];
+            copy[maxRow] = temp;
+
+            temp = identity[i];
+            identity[i] = identity[maxRow];
+            identity[maxRow] = temp;
+
+            // 检查主元是否为零
+            if (Math.abs(copy[i][i]) < 1e-10) {
+                throw new IllegalArgumentException("Matrix is singular or nearly singular.");
+            }
+
+            // 归一化主元行
+            double diagValue = copy[i][i];
+            for (int j = 0; j < n; j++) {
+                copy[i][j] /= diagValue;
+                identity[i][j] /= diagValue;
+            }
+
+            // 消去其他行的该列
+            for (int k = 0; k < n; k++) {
+                if (k != i) {
+                    double factor = copy[k][i];
+                    for (int j = 0; j < n; j++) {
+                        copy[k][j] -= factor * copy[i][j];
+                        identity[k][j] -= factor * identity[i][j];
+                    }
+                }
+            }
+        }
+
+        return identity; // 返回逆矩阵
     }
 
-    private double dotProduct(double[] a, double[] b) {
+
+    private static double dotProduct(double[] a, double[] b) {
         double result = 0;
         for (int i = 0; i < a.length; i++) {
             result += a[i] * b[i];
@@ -301,7 +361,7 @@ public class GMM {
         return result;
     }
 
-    private double[] matrixVectorProduct(double[][] matrix, double[] vector) {
+    private static double[] matrixVectorProduct(double[][] matrix, double[] vector) {
         double[] result = new double[matrix.length];
         for (int i = 0; i < matrix.length; i++) {
             for (int j = 0; j < vector.length; j++) {
@@ -312,7 +372,7 @@ public class GMM {
     }
 
     // 计算矩阵的行列式
-    public double determinant(double[][] matrix) {
+    public static double determinant(double[][] matrix) {
         int n = matrix.length;
 
         // 如果是 1x1 矩阵，直接返回唯一元素
@@ -335,7 +395,7 @@ public class GMM {
     }
 
     // 生成子矩阵（去掉指定行和列后的矩阵）
-    private double[][] minor(double[][] matrix, int row, int col) {
+    private static double[][] minor(double[][] matrix, int row, int col) {
         int n = matrix.length;
         double[][] minor = new double[n - 1][n - 1];
 
