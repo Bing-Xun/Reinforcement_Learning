@@ -1,5 +1,8 @@
 package ddpg.v3;
 
+import db.config.MyBatisConfig;
+import db.entity.QuoteEntity;
+import db.mapper.QuoteMapper;
 import ddpg.v1.SimpleActorCritic;
 import ddpg.v3.action.actor.ActionActor;
 import ddpg.v3.action.critic.ActionCritic;
@@ -8,9 +11,12 @@ import ddpg.v3.action.history.ActionHistory;
 import ddpg.v3.reward.Reward;
 import ddpg.v3.position.Position;
 import ddpg.v3.util.Utils;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SimplifiedDDPG {
@@ -101,5 +107,28 @@ public class SimplifiedDDPG {
         }
 
         return 0;
+    }
+
+    public static List<QuoteEntity> getQuoteList() {
+        List<QuoteEntity> quotes = new ArrayList<>();
+
+        // 使用 Java 配置创建 SqlSessionFactory
+        MyBatisConfig myBatisConfig = new MyBatisConfig();
+        SqlSessionFactory sqlSessionFactory = myBatisConfig.sqlSessionFactory();
+
+        try (SqlSession session = sqlSessionFactory.openSession()) {
+            QuoteMapper quoteMapper = session.getMapper(QuoteMapper.class);
+
+            int limit = 1000;
+            quotes = quoteMapper.getQuotes("quote_btc_1m", limit);
+//            for (QuoteEntity quote : quotes) {
+//                System.out.println(quote);
+//            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return quotes;
     }
 }
