@@ -38,7 +38,10 @@ public class CalculateKD {
             BigDecimal lowest = lowestPrices.get(i - period + 1);
 
             // 计算RSV
-            BigDecimal rsv = (close.subtract(lowest)).divide(highest.subtract(lowest), 10, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+            BigDecimal rsv = BigDecimal.ZERO;
+            if (highest.subtract(lowest).compareTo(BigDecimal.ZERO) != 0) {
+                rsv = (close.subtract(lowest)).divide(highest.subtract(lowest), 10, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+            }
 
             // 使用平滑系数更新K和D值
             BigDecimal k = prevK.multiply(BigDecimal.valueOf(1).subtract(alpha)).add(rsv.multiply(alpha));

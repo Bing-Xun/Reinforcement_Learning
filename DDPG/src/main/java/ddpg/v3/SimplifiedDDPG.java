@@ -1,5 +1,9 @@
 package ddpg.v3;
 
+import Indicators.MACD;
+import Indicators.MovingAverage;
+import Indicators.OBV;
+import Indicators.RSI;
 import db.config.MyBatisConfig;
 import db.entity.QuoteEntity;
 import db.mapper.QuoteMapper;
@@ -17,7 +21,13 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
+
+import static Indicators.MACD.calculateEMA;
+import static ddpg.v3.graph.ChartDrawer.plotKdGraph;
 
 public class SimplifiedDDPG {
 
@@ -43,7 +53,10 @@ public class SimplifiedDDPG {
         ActionCritic actionCritic = new ActionCritic(STATE_SIZE);
 
         // 模擬行情
-        double[][] states = SimpleActorCritic.getStates(600);
+//        double[][] states = SimpleActorCritic.getStates(600);
+//        double[][] states = getQuoteList();
+        double[][] states = getIndicatorsList();
+
 //        plotKdGraph(states); // 畫kd圖
         ActionHistory actionHistory = new ActionHistory();
 
@@ -74,7 +87,7 @@ public class SimplifiedDDPG {
 
             int action = Utils.getMaxIndex(actionProbs);
             double volume = actionProbs[ACTION_SIZE];
-            double profit = position.modifyPosition(BigDecimal.valueOf(state[0]), volume, action);
+            double profit = position.modifyPosition(BigDecimal.valueOf(price), volume, action);
             if (profit > maxProfit) maxProfit = profit;
             if (profit < minProfit) minProfit = profit;
             totalReward += profit;
@@ -109,7 +122,7 @@ public class SimplifiedDDPG {
         return 0;
     }
 
-    public static List<QuoteEntity> getQuoteList() {
+    public static List<QuoteEntity> getQuoteList(String tableName, int limit) {
         List<QuoteEntity> quotes = new ArrayList<>();
 
         // 使用 Java 配置创建 SqlSessionFactory
@@ -119,8 +132,7 @@ public class SimplifiedDDPG {
         try (SqlSession session = sqlSessionFactory.openSession()) {
             QuoteMapper quoteMapper = session.getMapper(QuoteMapper.class);
 
-            int limit = 1000;
-            quotes = quoteMapper.getQuotes("quote_btc_1m", limit);
+            quotes = quoteMapper.getQuotes(tableName, limit);
 //            for (QuoteEntity quote : quotes) {
 //                System.out.println(quote);
 //            }
@@ -130,5 +142,83 @@ public class SimplifiedDDPG {
         }
 
         return quotes;
+    }
+
+    public static double[][] getQuoteList() {
+        int quoteCnt = 2900;
+
+        List<QuoteEntity> quote1mList = getQuoteList("quote_btc_1m", quoteCnt);
+        List<QuoteEntity> quote3mList = getQuoteList("quote_btc_3m", quoteCnt);
+        List<QuoteEntity> quote5mList = getQuoteList("quote_btc_5m", quoteCnt);
+        double[][] result = new double[quoteCnt][9];
+
+        for(int i=0; i<quoteCnt; i++) {
+            double[] arr = DoubleStream.concat(
+                    DoubleStream.concat(DoubleStream.of(getDouble(quote1mList.get(i)))
+                    , DoubleStream.of(getDouble(quote3mList.get(i))))
+                    , DoubleStream.of(getDouble(quote5mList.get(i)))
+            ).toArray();
+
+            result[i] = arr;
+        }
+
+        return result;
+    }
+
+    /**
+     * price, MACD, MovingAvg, OBV, RSI, VOl
+     */
+    public static double[][] getIndicatorsList() {
+        int quoteCnt = 12000;
+        List<QuoteEntity> quote1mList = getQuoteList("quote_btc_1m", quoteCnt);
+        List<Double> priceList = quote1mList.stream().map(o -> {
+            return Double.valueOf(o.getOpen().doubleValue());
+        }).toList();
+        List<Double> volList = quote1mList.stream().map(o -> {
+            return Double.valueOf(o.getVolume().doubleValue());
+        }).toList();
+
+        List<double[]> result = new ArrayList<>();
+        for(int i=30; i<quoteCnt; i++) {
+            // macd
+            double[] priceArray = priceList.subList(i - 26, i).stream()
+                    .mapToDouble(Double::doubleValue)  // 转换为原始类型
+                    .toArray();
+
+            double[] obvPriceArray = priceList.subList(i - 5, i).stream()
+                    .mapToDouble(Double::doubleValue)  // 转换为原始类型
+                    .toArray();
+
+            double[] obvVolArr = volList.subList(i - 5, i).stream()
+                    .mapToDouble(Double::doubleValue)  // 转换为原始类型
+                    .toArray();
+
+            double fastEMA = calculateEMA(priceArray, 12); // 快線
+            double slowEMA = calculateEMA(priceArray, 26); // 慢線
+            double macd = fastEMA - slowEMA;
+
+            double ma = MovingAverage.calculateMA(priceArray, 3);
+
+            double obv = OBV.calculateOBV(obvPriceArray, obvVolArr);
+
+            double rsi = RSI.calculateRSIFromPrices(priceArray, 5);
+            result.add(new double[]{priceList.get(i), macd, ma, obv, rsi, volList.get(i)});
+        }
+
+        return result.toArray(new double[0][]);
+    }
+
+    private static double[] getDouble(QuoteEntity entity) {
+        return new double[]{
+                entity.getOpen().doubleValue(),
+                entity.getHigh().doubleValue(),
+                entity.getLow().doubleValue(),
+                entity.getClose().doubleValue(),
+                entity.getVolume().doubleValue(),
+                entity.getQuoteAssetVolume().doubleValue(),
+                entity.getTrades().doubleValue(),
+                entity.getTakerBuyBaseAssetVolume().doubleValue(),
+                entity.getTakerBuyQuoteAssetVolume().doubleValue(),
+        };
     }
 }

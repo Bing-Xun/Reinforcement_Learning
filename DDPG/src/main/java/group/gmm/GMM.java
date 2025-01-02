@@ -2,6 +2,7 @@ package group.gmm;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ddpg.v3.SimplifiedDDPG;
 import group.ElbowMethod;
 import group.gmm.vo.GMMVO;
 import group.util.ClusteringUtils;
@@ -52,7 +53,8 @@ public class GMM {
     public static void main(String[] args) {
         // 示例数据
 //        double[][] data = generateRandomDataPoints(20);
-        double[][] data = getData();
+//        double[][] data = getData();
+        double[][] data = SimplifiedDDPG.getQuoteList();
 
         // 使用肘部法则选择簇数
         int numClusters = ClusteringUtils.determineOptimalClusters(data, 30);
@@ -61,8 +63,8 @@ public class GMM {
         GMM gmm = new GMM();
         GMMVO vo = gmm.train(data, numClusters);
 
-        double d = predictCluster(new double[]{-4.8, -5.22}, vo);
-        System.out.println("d:"+d);
+//        double d = predictCluster(new double[]{-4.8, -5.22}, vo);
+//        System.out.println("d:"+d);
 
 
         List<List<double[]>> list = getGrraphList(data, numClusters, vo);
