@@ -3,12 +3,12 @@ package ddpg.v3.action.critic;
 import java.util.Arrays;
 
 // Critic 模型
-public class ActionCritic {
+public class Critic {
 
     public double[] weights; // 多維權重
     private int stateSize;    // 狀態維度
 
-    public ActionCritic(int stateSize) {
+    public Critic(int stateSize) {
         this.stateSize = stateSize;
         this.weights = new double[stateSize];
         // 初始化權重（可以根據需求調整初始值）

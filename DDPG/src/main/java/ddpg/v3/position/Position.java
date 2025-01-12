@@ -1,31 +1,17 @@
 package ddpg.v3.position;
 
 import ddpg.v3.util.Utils;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+@Data
 public class Position {
 
     private BigDecimal amount = BigDecimal.ZERO;
     private double positionCnt = 0.0;
     private BigDecimal price = BigDecimal.ZERO;
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public double getPositionCnt() {
-        return positionCnt;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
 
     private double minProfit;
 

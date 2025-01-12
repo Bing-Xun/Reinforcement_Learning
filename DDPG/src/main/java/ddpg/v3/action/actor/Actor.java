@@ -5,7 +5,7 @@ import ddpg.v3.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
-public class ActionActor {
+public class Actor {
     private double[][] weights; // 狀態到行動的權重
     private int stateSize;
     private int actionSize;
@@ -16,10 +16,10 @@ public class ActionActor {
         this.epsilon = epsilon;
     }
 
-    public ActionActor(int stateSize, int actionSize) {
+    public Actor(int stateSize, int actionSize) {
         this.stateSize = stateSize;
         this.actionSize = actionSize;
-        this.weights = new double[stateSize][actionSize];
+        this.weights = new double[stateSize][actionSize + 1];
         // 初始化權重
         for (int i = 0; i < stateSize; i++) {
             for (int j = 0; j < actionSize; j++) {
@@ -36,7 +36,7 @@ public class ActionActor {
         for (int i = 0; i < 3; i++) {
             actions[i] /= sum;
         }
-        actions[actionSize] = random.nextDouble();  // 随机生成成交量比例
+        actions[actionSize] = random.nextDouble() * 0.01;  // 随机生成成交量比例
         return actions;
     }
 
@@ -83,8 +83,7 @@ public class ActionActor {
         for (int j = 0; j < stateSize; j++) {
             volume += state[j] * weights[j][actionSize-1];
         }
-        actions[actionSize] = Math.tanh(volume);  // 归一化到 [-1, 1]
-        actions[actionSize] = Math.abs(actions[actionSize]);  // 取绝对值归一化到 [0, 1]
+        actions[actionSize] = Math.max(0.0, Math.min(0.1, Math.abs(Math.tanh(volume)))); // 确保成交量在 [0, 0.1]
 
         return actions;
     }
@@ -97,6 +96,10 @@ public class ActionActor {
                 double gradient = (actionProbs[j] - (j == Utils.getMaxIndex(actionProbs) ? 1.0 : 0.0)) * state[i];
                 weights[i][j] += learningRate * tdError * gradient;
             }
+
+            // 更新成交量的权重
+            double volumeGradient = state[i]; // 成交量的梯度
+            weights[i][actionSize] += learningRate * tdError * volumeGradient;
         }
     }
 

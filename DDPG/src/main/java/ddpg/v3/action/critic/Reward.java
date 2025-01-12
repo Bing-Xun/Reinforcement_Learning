@@ -1,16 +1,17 @@
-package ddpg.v3.reward;
+package ddpg.v3.action.critic;
 
 import ddpg.v2.util.Utils;
 import ddpg.v3.action.enums.ActionEnum;
 import ddpg.v3.action.history.ActionHistory;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+@Data
 public class Reward {
 
     private double reward;
@@ -84,57 +85,67 @@ public class Reward {
             ActionHistory.History history = historyList.get(i);
             ActionHistory.History nextHistory = historyList.get(i+1); // 因為這邊要拿到next, 所以 size-1
 
-            if(Utils.getMaxIndex(history.getAction()) == ActionEnum.HOLD.getValue()) {
+//            System.out.println("history.getAction():" + Utils.getMaxIndex(Arrays.copyOf(history.getAction(), history.getAction().length - 1)));
+            if(Utils.getMaxIndex(Arrays.copyOf(history.getAction(), history.getAction().length - 1)) == ActionEnum.HOLD.getValue()) {
                 Reward reward = new Reward();
-                reward.reward = ((basePrice.subtract(history.getPrice())).divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
                 reward.state = history.getState();
                 reward.nextState = nextHistory.getState();
+
+                reward.reward = 0.0;
+                if(history.getVolume() != 0.0) {
+                    reward.reward = -10;
+                }
+                if(reward.reward == 0.0) {
+                    reward.reward = ((basePrice.subtract(history.getPrice())).divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
+                }
+
                 rewardList.add(reward);
+//                System.out.println("reward:"+reward.reward);
             }
 
-            if(Utils.getMaxIndex(history.getAction()) == ActionEnum.SELL.getValue()) {
+            if(Utils.getMaxIndex(Arrays.copyOf(history.getAction(), history.getAction().length - 1)) == ActionEnum.SELL.getValue()) {
                 Reward reward = new Reward();
-                reward.reward = ((basePrice.subtract(history.getPrice())).divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
                 reward.state = history.getState();
                 reward.nextState = nextHistory.getState();
+
+                reward.reward = 0.0;
+                if(history.getPosition() == 0.0) {
+                    reward.reward = -10;
+                }
+                if(history.getPosition() < history.getVolume()) {
+                    reward.reward = -10;
+                }
+                if(reward.reward == 0.0) {
+                    reward.reward = ((basePrice.subtract(history.getPrice())).divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
+                }
+
                 rewardList.add(reward);
+//                System.out.println("reward:"+reward.reward);
             }
 
-            if(Utils.getMaxIndex(history.getAction()) == ActionEnum.BUY.getValue()) {
+            if(Utils.getMaxIndex(Arrays.copyOf(history.getAction(), history.getAction().length - 1)) == ActionEnum.BUY.getValue()) {
                 Reward reward = new Reward();
-                reward.reward = ((basePrice.subtract(history.getPrice()))
-                    .multiply(BigDecimal.valueOf(history.getPosition() / buyPosition))
-                    .divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
                 reward.state = history.getState();
                 reward.nextState = nextHistory.getState();
+
+                reward.reward = 0.0;
+                if(history.getVolume() == 0.0) {
+                    reward.reward = -10;
+                }
+                if(history.getVolume() * history.getPrice().doubleValue() > history.getAmount().doubleValue()) {
+                    reward.reward = -10;
+                    System.out.println("### aaa");
+                }
+                if(reward.reward == 0.0) {
+                    reward.reward = ((basePrice.subtract(history.getPrice()))
+                            .multiply(BigDecimal.valueOf(history.getPosition() / buyPosition))
+                            .divide(diffPrice, 2, RoundingMode.DOWN)).doubleValue();
+                }
+
                 rewardList.add(reward);
             }
         }
 
         return rewardList;
-    }
-
-    public double getReward() {
-        return reward;
-    }
-
-    public void setReward(double reward) {
-        this.reward = reward;
-    }
-
-    public double[] getState() {
-        return state;
-    }
-
-    public void setState(double[] state) {
-        this.state = state;
-    }
-
-    public double[] getNextState() {
-        return nextState;
-    }
-
-    public void setNextState(double[] nextState) {
-        this.nextState = nextState;
     }
 }

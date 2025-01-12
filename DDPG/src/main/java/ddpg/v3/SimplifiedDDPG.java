@@ -1,15 +1,15 @@
 package ddpg.v3;
 
-import Indicators.MACD;
 import Indicators.MovingAverage;
 import Indicators.OBV;
 import Indicators.RSI;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import db.config.MyBatisConfig;
 import db.entity.QuoteEntity;
 import db.mapper.QuoteMapper;
-import ddpg.v1.SimpleActorCritic;
-import ddpg.v3.action.actor.ActionActor;
-import ddpg.v3.action.critic.ActionCritic;
+import ddpg.v3.action.actor.Actor;
+import ddpg.v3.action.actor.Reward;
+import ddpg.v3.action.critic.Critic;
 import ddpg.v3.action.enums.ActionEnum;
 import ddpg.v3.action.history.ActionHistory;
 import ddpg.v3.reward.Reward;
@@ -18,27 +18,56 @@ import ddpg.v3.util.Utils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.DoubleStream;
-import java.util.stream.Stream;
 
 import static Indicators.MACD.calculateEMA;
-import static ddpg.v3.graph.ChartDrawer.plotKdGraph;
 
 public class SimplifiedDDPG {
 
-    private static final int STATE_SIZE = 1; // 假設狀態包含3個特徵
+    private static final int STATE_SIZE = 9; // 假設狀態包含3個特徵
     private static final int ACTION_SIZE = 3; // 行動：買入、賣出、持倉, 成交量
 
     private static double gamma = 0.8; // 折扣因子
     private static double learningRate = 0.01;  // actor 的學習率
     private static double criticLearningRate = 0.01;  // Critic 的學習率
 
-    public static void main(String[] args) {
+    private static Actor actor;
+
+    public static void main(String[] args) throws Exception {
+//        train();
+        String filePath = "/Users/wubingxun/Desktop/Reinforcement_Learning/DDPG/data.json";
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        double[][] states = getIndicatorsList();
+        objectMapper.writeValue(new File(filePath), states);
+
+        double[][] _states = objectMapper.readValue(new File(filePath), double[][].class);
+
+        // 打印读取的数据
+        System.out.println("从 JSON 文件读取的二维数组:");
+        for (double[] row : _states) {
+            for (double value : row) {
+                System.out.print(value + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    public static Object[] predict(double[] state) {
+        double[] actionProbs = actor.predict(state); // 預測行動方向的概率
+        int action = Utils.getMaxIndex(Arrays.copyOf(actionProbs, actionProbs.length - 1));
+        double volume = actionProbs[ACTION_SIZE];
+
+        return new Object[]{action, volume};
+    }
+
+    public static void train() {
         Position position = new Position();
         position.setAmount(BigDecimal.valueOf(1000.0)); // 初始化資金
 
@@ -48,57 +77,92 @@ public class SimplifiedDDPG {
         double minProfit = 0.0;
 
         // 初始化 行情模型
-        ActionActor actionActor = new ActionActor(STATE_SIZE, ACTION_SIZE);
-        actionActor.setEpsilon(0.9);
-        ActionCritic actionCritic = new ActionCritic(STATE_SIZE);
+        actor = new Actor(STATE_SIZE, ACTION_SIZE);
+        actor.setEpsilon(0.9);
+        Critic critic = new Critic(STATE_SIZE);
 
-        // 模擬行情
+        // 模擬行
 //        double[][] states = SimpleActorCritic.getStates(600);
 //        double[][] states = getQuoteList();
         double[][] states = getIndicatorsList();
+        int changeCpsilonCal1 = (int) (states.length * 0.1);
+        int changeCpsilonCal2 = (int) (states.length * 0.3);
+
 
 //        plotKdGraph(states); // 畫kd圖
         ActionHistory actionHistory = new ActionHistory();
 
         for(int i=0; i<states.length-1; i++) {
-            double[] state = new double[]{states[i][0]};
+            List<Double> list = new ArrayList<>();
+            list.addAll(Utils.toDoubleList(states[i]));
+            list.addAll(List.of(position.getAmount().doubleValue(), position.getPositionCnt(), position.getPrice().doubleValue()));
+            double[] state = list.stream().mapToDouble(Double::doubleValue).toArray();
             double price = state[0];
 
-            // 行情
-            double[] actionProbs = actionActor.predict(state); // 預測行動方向的概率
-
-            ActionHistory.History history = new ActionHistory.History();
-            history.setState(state);
-            history.setAction(actionProbs);
-            history.setPrice(BigDecimal.valueOf(price));
-            history.setPosition(position.getPositionCnt());
-            actionHistory.getHistoryList().add(history);
-
-            if(Utils.getMaxIndex(actionProbs) == ActionEnum.SELL.getValue()) {
-                List<Reward> rewardList = Reward.getRewards(actionHistory);
-
-                for(Reward reward : rewardList) {
-                    double actionTdError = actionCritic.getTdError(reward.getReward(), gamma, reward.getState(), reward.getNextState()); // TD 誤差計算
-                    // 更新 action 權重
-                    actionActor.updateWeights(state, actionProbs, actionTdError, learningRate);
-                    actionCritic.updateWeights(state, actionTdError, criticLearningRate);
-                }
+            if(i > changeCpsilonCal1 && i < changeCpsilonCal2) {
+                actor.setEpsilon(0.3);
+            }
+            if( i > changeCpsilonCal2) {
+                actor.setEpsilon(0.1);
             }
 
-            int action = Utils.getMaxIndex(actionProbs);
+            // action
+            double[] actionProbs = actor.predict(state); // 預測行動方向的概率
+
+            ActionHistory.History history = new ActionHistory.History();
+            ActionHistory.Action hAction = new ActionHistory.Action();
+            ActionHistory.Position hPosition = new ActionHistory.Position();
+            history.setState(state);
+            history.setAmount(position.getAmount());
+            hAction.setAction(actionProbs);
+            hAction.setActionEnum(ActionEnum.values()[Utils.getMaxIndex(actionProbs)]); // TODO 要問問gpt
+            hAction.setPrice(BigDecimal.valueOf(price));
+            hAction.setVolume(actionProbs[actionProbs.length-1]);
+            history.setAction(hAction);
+            hPosition.setPrice(position.getPrice());
+            hPosition.setCnt(position.getPositionCnt());
+            history.setPosition(hPosition);
+//            actionHistory.getHistoryList().add(history);
+
+            // action
+            {
+                // 1. 更新 Critic
+                Reward actionReward = Reward.getRewards(history, history, new BigDecimal(price)); // TODO nextHistory
+                double actionTdError = critic.getTdError(actionReward.getReward(), gamma, actionReward.getState(), actionReward.getNextState());
+                critic.updateWeights(state, actionTdError, criticLearningRate);
+
+                // 2. 用更新後的 Critic 計算新的 TD 誤差
+                actionTdError = critic.getTdError(actionReward.getReward(), gamma, actionReward.getState(), actionReward.getNextState());
+
+                // 3. 更新 Actor，使用更新後的 TD 誤差
+                actor.updateWeights(state, actionProbs, actionTdError, learningRate);
+            }
+
+            // volume
+            {
+
+            }
+
+
+
+            System.out.printf("\n");
+            System.out.printf("##########\n");
+            System.out.printf("交易前現金餘額: %.2f\n", position.getAmount());
+            System.out.printf("交易前持倉量: %.2f\n", position.getPositionCnt());
+            System.out.printf("交易前持倉均價: %.2f\n", position.getPrice());
+
+            int action = Utils.getMaxIndex(Arrays.copyOf(actionProbs, actionProbs.length - 1));
             double volume = actionProbs[ACTION_SIZE];
             double profit = position.modifyPosition(BigDecimal.valueOf(price), volume, action);
             if (profit > maxProfit) maxProfit = profit;
             if (profit < minProfit) minProfit = profit;
             totalReward += profit;
 
-            System.out.println("");
-            System.out.println("##########");
             System.out.println("狀態: " + java.util.Arrays.toString(state));
-            System.out.println("方向概率 (買, 賣, 持倉): " + java.util.Arrays.toString(actionProbs));
-//            System.out.println("方向(買, 賣, 持倉): " + action);
+            System.out.println("方向概率 (買, 賣, 持倉):" + java.util.Arrays.toString(actionProbs));
+            System.out.println("方向(買, 賣, 持倉): " + action);
 //            System.out.println("獎勵: " + reward);
-//            if(reward > 1) System.out.println("獎勵aa: " + reward);
+            if(profit > 1) System.out.println("獎勵aa: " + profit);
             System.out.printf("交易量: %.2f\n", volume);
             System.out.printf("現金餘額: %.2f\n", position.getAmount());
             System.out.printf("持倉量: %.2f\n", position.getPositionCnt());
@@ -108,18 +172,8 @@ public class SimplifiedDDPG {
             System.out.printf("最低收益: %.2f\n", minProfit);
             System.out.printf("總收益: %.2f\n", totalReward);
         }
-    }
 
-    private static double getVolume(Position position, Integer action, BigDecimal price) {
-        if(action == 0) {
-            Double maxPosition = position.getAmount().divide(price, 4, RoundingMode.DOWN).doubleValue();
-            return Math.random() * ((maxPosition / 10.0) + 1);
-        }
-        if(action == 1) {
-            return Math.random() * (position.getPositionCnt() + 1);
-        }
-
-        return 0;
+        actor.setEpsilon(0.1);
     }
 
     public static List<QuoteEntity> getQuoteList(String tableName, int limit) {
@@ -169,7 +223,7 @@ public class SimplifiedDDPG {
      * price, MACD, MovingAvg, OBV, RSI, VOl
      */
     public static double[][] getIndicatorsList() {
-        int quoteCnt = 12000;
+        int quoteCnt = 19000;
         List<QuoteEntity> quote1mList = getQuoteList("quote_btc_1m", quoteCnt);
         List<Double> priceList = quote1mList.stream().map(o -> {
             return Double.valueOf(o.getOpen().doubleValue());
@@ -178,6 +232,10 @@ public class SimplifiedDDPG {
             return Double.valueOf(o.getVolume().doubleValue());
         }).toList();
 
+        return getIndicatorsList(priceList, volList, quoteCnt);
+    }
+
+    public static double[][] getIndicatorsList(List<Double> priceList, List<Double> volList, int quoteCnt) {
         List<double[]> result = new ArrayList<>();
         for(int i=30; i<quoteCnt; i++) {
             // macd

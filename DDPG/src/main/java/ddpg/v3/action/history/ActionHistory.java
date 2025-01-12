@@ -1,5 +1,8 @@
 package ddpg.v3.action.history;
 
+import ddpg.v3.action.enums.ActionEnum;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,42 +19,25 @@ public class ActionHistory {
         this.historyList = historyList;
     }
 
+    @Data
     public static class History {
         private double[] state;
+        private BigDecimal amount;
+        private Action action;
+        private Position position;
+    }
+
+    @Data
+    public static class Action {
         private double[] action;
+        private ActionEnum actionEnum;
         private BigDecimal price;
-        private Double position;
+        private double volume;
+    }
 
-        public double[] getAction() {
-            return action;
-        }
-
-        public void setAction(double[] action) {
-            this.action = action;
-        }
-
-        public BigDecimal getPrice() {
-            return price;
-        }
-
-        public void setPrice(BigDecimal price) {
-            this.price = price;
-        }
-
-        public Double getPosition() {
-            return position;
-        }
-
-        public void setPosition(Double position) {
-            this.position = position;
-        }
-
-        public double[] getState() {
-            return state;
-        }
-
-        public void setState(double[] state) {
-            this.state = state;
-        }
+    @Data
+    public static class Position {
+        private BigDecimal price;
+        private Double cnt;
     }
 }
