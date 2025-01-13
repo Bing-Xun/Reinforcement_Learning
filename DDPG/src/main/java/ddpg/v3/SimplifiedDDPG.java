@@ -8,18 +8,16 @@ import db.config.MyBatisConfig;
 import db.entity.QuoteEntity;
 import db.mapper.QuoteMapper;
 import ddpg.v3.action.actor.Actor;
-import ddpg.v3.action.actor.Reward;
+import ddpg.v3.action.actor.ActorReward;
 import ddpg.v3.action.critic.Critic;
 import ddpg.v3.action.enums.ActionEnum;
 import ddpg.v3.action.history.ActionHistory;
-import ddpg.v3.reward.Reward;
 import ddpg.v3.position.Position;
 import ddpg.v3.util.Utils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +35,10 @@ public class SimplifiedDDPG {
     private static double learningRate = 0.01;  // actor 的學習率
     private static double criticLearningRate = 0.01;  // Critic 的學習率
 
-    private static Actor actor;
+    private static Actor actionActor;
+    private static Critic actionCritic;
+    private static Actor volumeActor;
+    private static Critic volumeCritic;
 
     public static void main(String[] args) throws Exception {
 //        train();
@@ -77,9 +78,12 @@ public class SimplifiedDDPG {
         double minProfit = 0.0;
 
         // 初始化 行情模型
-        actor = new Actor(STATE_SIZE, ACTION_SIZE);
-        actor.setEpsilon(0.9);
-        Critic critic = new Critic(STATE_SIZE);
+        actionActor = new Actor(STATE_SIZE, ACTION_SIZE);
+        actionActor.setEpsilon(0.9);
+        actionCritic = new Critic(STATE_SIZE);
+
+        volumeActor = new Actor(STATE_SIZE, ACTION_SIZE);;
+        volumeCritic = new Critic(STATE_SIZE);;
 
         // 模擬行
 //        double[][] states = SimpleActorCritic.getStates(600);
@@ -90,57 +94,52 @@ public class SimplifiedDDPG {
 
 
 //        plotKdGraph(states); // 畫kd圖
-        ActionHistory actionHistory = new ActionHistory();
+//        ActionHistory actionHistory = new ActionHistory();
 
-        for(int i=0; i<states.length-1; i++) {
+        double holdDiffPrice = 100;
+        double maxVolumeRewardSource = (holdDiffPrice * 3) * position.getAmount().doubleValue();
+        for(int i=0; i<states.length-2; i++) {
+            if(i > changeCpsilonCal1 && i < changeCpsilonCal2) {
+                actionActor.setEpsilon(0.3);
+            }
+            if( i > changeCpsilonCal2) {
+                actionActor.setEpsilon(0.1);
+            }
+
             List<Double> list = new ArrayList<>();
             list.addAll(Utils.toDoubleList(states[i]));
             list.addAll(List.of(position.getAmount().doubleValue(), position.getPositionCnt(), position.getPrice().doubleValue()));
             double[] state = list.stream().mapToDouble(Double::doubleValue).toArray();
             double price = state[0];
 
-            if(i > changeCpsilonCal1 && i < changeCpsilonCal2) {
-                actor.setEpsilon(0.3);
-            }
-            if( i > changeCpsilonCal2) {
-                actor.setEpsilon(0.1);
-            }
-
             // action
-            double[] actionProbs = actor.predict(state); // 預測行動方向的概率
+            double[] actionProbs = actionActor.predict(state); // 預測行動方向的概率
+            ActionHistory.History history = getHistory(state, position, actionProbs, price);
 
-            ActionHistory.History history = new ActionHistory.History();
-            ActionHistory.Action hAction = new ActionHistory.Action();
-            ActionHistory.Position hPosition = new ActionHistory.Position();
-            history.setState(state);
-            history.setAmount(position.getAmount());
-            hAction.setAction(actionProbs);
-            hAction.setActionEnum(ActionEnum.values()[Utils.getMaxIndex(actionProbs)]); // TODO 要問問gpt
-            hAction.setPrice(BigDecimal.valueOf(price));
-            hAction.setVolume(actionProbs[actionProbs.length-1]);
-            history.setAction(hAction);
-            hPosition.setPrice(position.getPrice());
-            hPosition.setCnt(position.getPositionCnt());
-            history.setPosition(hPosition);
-//            actionHistory.getHistoryList().add(history);
+            Position nextPosition = new Position(position.getAmount(), position.getPositionCnt(), position.getPrice());
+            List<Double> nextList = new ArrayList<>();
+            nextList.addAll(Utils.toDoubleList(states[i+1]));
+            nextList.addAll(List.of(nextPosition.getAmount().doubleValue(), nextPosition.getPositionCnt(), nextPosition.getPrice().doubleValue()));
+            double[] nextState = nextList.stream().mapToDouble(Double::doubleValue).toArray();
+
 
             // action
             {
                 // 1. 更新 Critic
-                Reward actionReward = Reward.getRewards(history, history, new BigDecimal(price)); // TODO nextHistory
-                double actionTdError = critic.getTdError(actionReward.getReward(), gamma, actionReward.getState(), actionReward.getNextState());
-                critic.updateWeights(state, actionTdError, criticLearningRate);
+                ActorReward actionActorReward = ActorReward.getRewards(history, nextState, new BigDecimal(price), holdDiffPrice);
+                double actionTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
+                actionCritic.updateWeights(state, actionTdError, criticLearningRate);
 
                 // 2. 用更新後的 Critic 計算新的 TD 誤差
-                actionTdError = critic.getTdError(actionReward.getReward(), gamma, actionReward.getState(), actionReward.getNextState());
+                actionTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
 
                 // 3. 更新 Actor，使用更新後的 TD 誤差
-                actor.updateWeights(state, actionProbs, actionTdError, learningRate);
+                actionActor.updateWeights(state, actionProbs, actionTdError, learningRate);
             }
 
             // volume
             {
-
+                maxVolumeRewardSource;
             }
 
 
@@ -278,5 +277,23 @@ public class SimplifiedDDPG {
                 entity.getTakerBuyBaseAssetVolume().doubleValue(),
                 entity.getTakerBuyQuoteAssetVolume().doubleValue(),
         };
+    }
+
+    private static ActionHistory.History getHistory(double[] state, Position position, double[] actionProbs, double price) {
+        ActionHistory.History history = new ActionHistory.History();
+        ActionHistory.Action hAction = new ActionHistory.Action();
+        ActionHistory.Position hPosition = new ActionHistory.Position();
+        history.setState(state);
+        history.setAmount(position.getAmount());
+        hAction.setAction(actionProbs);
+        hAction.setActionEnum(ActionEnum.values()[Utils.getMaxIndex(actionProbs)]);
+        hAction.setPrice(BigDecimal.valueOf(price));
+        hAction.setVolume(actionProbs[actionProbs.length-1]);
+        history.setAction(hAction);
+        hPosition.setPrice(position.getPrice());
+        hPosition.setCnt(position.getPositionCnt());
+        history.setPosition(hPosition);
+
+        return history;
     }
 }

@@ -13,32 +13,14 @@ public class Position {
     private double positionCnt = 0.0;
     private BigDecimal price = BigDecimal.ZERO;
 
-    private double minProfit;
+    public Position() {
 
-    private double maxProfit;
+    }
 
-
-    /**
-     *
-     * @param side 0:buy, 1:sell, 2:hold
-     */
-    public double getPredictReward(BigDecimal price, Integer side) {
-        double profit = 0;
-        double v = 0.0;
-
-        if(side == 0) {
-            v = this.price.subtract(price).doubleValue();
-        }
-
-        if(side == 1) {
-            v = price.subtract(this.price).doubleValue();
-        }
-
-        profit = Utils.mapNonLinear(v, minProfit, maxProfit);
-        if (profit > maxProfit) maxProfit = profit;
-        if (profit < minProfit) minProfit = profit;
-
-        return 0;
+    public Position(BigDecimal amount, double positionCnt, BigDecimal price) {
+        this.amount = amount;
+        this.positionCnt = positionCnt;
+        this.price = price;
     }
 
     public double modifyPosition(BigDecimal price, double positionCnt, Integer side) {
