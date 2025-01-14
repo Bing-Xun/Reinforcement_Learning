@@ -45,20 +45,4 @@ public class Utils {
         // 使用 Arrays.asList
         return Arrays.asList(boxedArr);
     }
-
-
-    /**
-     * 非線性壓縮函數 (tanh)
-     *
-     * @param x 輸入值
-     * @param k 曲線陡峭程度
-     * @return 壓縮後的值 [-1, 1]
-     *
-     * k=5.0），壓縮曲線會更加陡峭，靠近 0 的值會被壓縮得更快。
-     * k=0.5），壓縮曲線會更加平緩，壓縮效果不明顯。
-     */
-    public static double tanh(double x, double k) {
-        return (Math.exp(k * x) - Math.exp(-k * x)) / (Math.exp(k * x) + Math.exp(-k * x));
-    }
-
 }

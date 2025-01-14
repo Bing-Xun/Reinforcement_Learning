@@ -14,10 +14,11 @@ public class ActorReward {
     private double[] state;
     private double[] nextState;
 
-    public static ActorReward getRewards(ActionHistory.History history, double[] nextState, BigDecimal price, double holdDiffPrice) {
+    public static ActorReward getRewards(ActionHistory.History history, double[] nextState, double holdDiffPrice) {
         ActorReward actorReward = new ActorReward();
         actorReward.state = history.getState();
         actorReward.nextState = nextState;
+        BigDecimal price = history.getAction().getPrice();
 
         if(history.getAction().getActionEnum() == ActionEnum.HOLD) {
             double d = Utils.mapNonLinear(

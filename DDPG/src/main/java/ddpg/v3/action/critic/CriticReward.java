@@ -15,35 +15,47 @@ public class CriticReward {
     private double[] state;
     private double[] nextState;
 
-    public static CriticReward getRewards(ActionHistory.History history, double[] nextState, double maxVolumeRewardSource) {
+    public static CriticReward getRewards(ActionHistory.History history, double[] nextState, double holdDiffPrice, double rewardBoundary) {
         CriticReward criticReward = new CriticReward();
         criticReward.state = history.getState();
         criticReward.nextState = nextState;
 
-//        if(history.getAction().getActionEnum() == ActionEnum.HOLD) {
-//            double d = ddpg.v3.util.Utils.mapNonLinear(
-//                    history.getPosition().getPrice().doubleValue()
-//                    , price.subtract(new BigDecimal(holdDiffPrice)).doubleValue()
-//                    , price.add(new BigDecimal(holdDiffPrice)).doubleValue()
-//            );
-//            actorReward.reward = Math.abs(ddpg.v3.util.Utils.mapNonLinearRangeV - Math.abs(d)); // 越接近中心越大
-//        }
+        double priceReward = Utils.mapNonLinear(
+            history.getAction().getPrice().doubleValue()
+            , history.getPosition().getPrice().subtract(new BigDecimal(holdDiffPrice * 3)).doubleValue()
+            , history.getPosition().getPrice().add(new BigDecimal(holdDiffPrice * 3)).doubleValue()
+        );
+
+        double volumeReward = Math.min(history.getAction().getVolume() / rewardBoundary, 1);
+
+        if(history.getAction().getActionEnum() == ActionEnum.HOLD) {
+            criticReward.reward = 1;
+
+            if(history.getAction().getVolume() != 0) {
+                criticReward.reward = -Utils.mapNonLinearRangeV;
+            }
+        }
 
         if(history.getAction().getActionEnum() == ActionEnum.SELL) {
-            double diffPrice = (history.getAction().getPrice().subtract(history.getPosition().getPrice())).doubleValue();
-            criticReward.reward = ddpg.v3.util.Utils.mapNonLinear(
-                    diffPrice * history.getAction().getVolume() * maxVolumeRewardSource
-                    , history.getPosition().getPrice().subtract(new BigDecimal(holdDiffPrice * 3)).doubleValue()
-                    , history.getPosition().getPrice().add(new BigDecimal(holdDiffPrice * 3)).doubleValue()
-            );
+            criticReward.reward = priceReward * volumeReward;
+
+            if(history.getAction().getVolume() > history.getPosition().getCnt()) {
+                criticReward.reward = -Utils.mapNonLinearRangeV;
+            }
+            if(history.getAction().getVolume() == 0) {
+                criticReward.reward = -Utils.mapNonLinearRangeV;
+            }
         }
 
         if(history.getAction().getActionEnum() == ActionEnum.BUY) {
-            criticReward.reward =  -Utils.mapNonLinear(
-                    price.doubleValue()
-                    , history.getPosition().getPrice().subtract(new BigDecimal(holdDiffPrice * 3)).doubleValue()
-                    , history.getPosition().getPrice().add(new BigDecimal(holdDiffPrice * 3)).doubleValue()
-            );
+            criticReward.reward = -priceReward * volumeReward;
+
+            if(history.getAction().getVolume() < history.getPosition().getCnt()) {
+                criticReward.reward = -Utils.mapNonLinearRangeV;
+            }
+            if(history.getAction().getVolume() == 0) {
+                criticReward.reward = -Utils.mapNonLinearRangeV;
+            }
         }
 
         return actorReward;

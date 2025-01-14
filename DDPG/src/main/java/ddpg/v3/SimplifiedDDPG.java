@@ -126,7 +126,7 @@ public class SimplifiedDDPG {
             // action
             {
                 // 1. 更新 Critic
-                ActorReward actionActorReward = ActorReward.getRewards(history, nextState, new BigDecimal(price), holdDiffPrice);
+                ActorReward actionActorReward = ActorReward.getRewards(history, nextState, holdDiffPrice);
                 double actionTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
                 actionCritic.updateWeights(state, actionTdError, criticLearningRate);
 
@@ -285,11 +285,13 @@ public class SimplifiedDDPG {
         ActionHistory.Position hPosition = new ActionHistory.Position();
         history.setState(state);
         history.setAmount(position.getAmount());
+
         hAction.setAction(actionProbs);
         hAction.setActionEnum(ActionEnum.values()[Utils.getMaxIndex(actionProbs)]);
         hAction.setPrice(BigDecimal.valueOf(price));
         hAction.setVolume(actionProbs[actionProbs.length-1]);
         history.setAction(hAction);
+
         hPosition.setPrice(position.getPrice());
         hPosition.setCnt(position.getPositionCnt());
         history.setPosition(hPosition);
