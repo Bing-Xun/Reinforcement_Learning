@@ -58,6 +58,6 @@ public class CriticReward {
             }
         }
 
-        return actorReward;
+        return criticReward;
     }
 }

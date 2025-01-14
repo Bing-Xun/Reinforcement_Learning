@@ -10,6 +10,7 @@ import db.mapper.QuoteMapper;
 import ddpg.v3.action.actor.Actor;
 import ddpg.v3.action.actor.ActorReward;
 import ddpg.v3.action.critic.Critic;
+import ddpg.v3.action.critic.CriticReward;
 import ddpg.v3.action.enums.ActionEnum;
 import ddpg.v3.action.history.ActionHistory;
 import ddpg.v3.position.Position;
@@ -97,13 +98,15 @@ public class SimplifiedDDPG {
 //        ActionHistory actionHistory = new ActionHistory();
 
         double holdDiffPrice = 100;
-        double maxVolumeRewardSource = (holdDiffPrice * 3) * position.getAmount().doubleValue();
+        double rewardBoundary = 0; // TODO
         for(int i=0; i<states.length-2; i++) {
             if(i > changeCpsilonCal1 && i < changeCpsilonCal2) {
                 actionActor.setEpsilon(0.3);
+                volumeActor.setEpsilon(0.3);
             }
             if( i > changeCpsilonCal2) {
                 actionActor.setEpsilon(0.1);
+                volumeActor.setEpsilon(0.1);
             }
 
             List<Double> list = new ArrayList<>();
@@ -127,22 +130,29 @@ public class SimplifiedDDPG {
             {
                 // 1. 更新 Critic
                 ActorReward actionActorReward = ActorReward.getRewards(history, nextState, holdDiffPrice);
-                double actionTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
-                actionCritic.updateWeights(state, actionTdError, criticLearningRate);
+                double actionActorTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
+                actionCritic.updateWeights(state, actionActorTdError, criticLearningRate);
 
                 // 2. 用更新後的 Critic 計算新的 TD 誤差
-                actionTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
+                double actionCriticTdError = actionCritic.getTdError(actionActorReward.getReward(), gamma, actionActorReward.getState(), actionActorReward.getNextState());
 
                 // 3. 更新 Actor，使用更新後的 TD 誤差
-                actionActor.updateWeights(state, actionProbs, actionTdError, learningRate);
+                actionActor.updateWeights(state, actionProbs, actionCriticTdError, learningRate);
             }
 
             // volume
             {
-                maxVolumeRewardSource;
+                // 1. 更新 Critic
+                CriticReward volumnCriticReward = CriticReward.getRewards(history, nextState, holdDiffPrice, rewardBoundary);
+                double volumeCriticTdError = volumeCritic.getTdError(volumnCriticReward.getReward(), gamma, volumnCriticReward.getState(), volumnCriticReward.getNextState());
+                volumeCritic.updateWeights(state, volumeCriticTdError, criticLearningRate);
+
+                // 2. 用更新後的 Critic 計算新的 TD 誤差
+                double volumeActorTdError = volumeCritic.getTdError(volumnCriticReward.getReward(), gamma, volumnCriticReward.getState(), volumnCriticReward.getNextState());
+
+                // 3. 更新 Actor，使用更新後的 TD 誤差
+                volumeActor.updateWeights(state, volumeActorTdError, learningRate);
             }
-
-
 
             System.out.printf("\n");
             System.out.printf("##########\n");
@@ -172,7 +182,8 @@ public class SimplifiedDDPG {
             System.out.printf("總收益: %.2f\n", totalReward);
         }
 
-        actor.setEpsilon(0.1);
+        actionActor.setEpsilon(0.1);
+        volumeActor.setEpsilon(0.1);
     }
 
     public static List<QuoteEntity> getQuoteList(String tableName, int limit) {
