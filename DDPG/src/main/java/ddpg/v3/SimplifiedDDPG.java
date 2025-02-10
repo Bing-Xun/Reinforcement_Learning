@@ -62,11 +62,13 @@ public class SimplifiedDDPG {
     }
 
     public static Object[] predict(double[] state) {
-        double[] actionProbs = actor.predict(state); // 預測行動方向的概率
-        int action = Utils.getMaxIndex(Arrays.copyOf(actionProbs, actionProbs.length - 1));
-        double volume = actionProbs[ACTION_SIZE];
-
-        return new Object[]{action, volume};
+        // TODO
+//        double[] actionProbs = actor.predict(state); // 預測行動方向的概率
+//        int action = Utils.getMaxIndex(Arrays.copyOf(actionProbs, actionProbs.length - 1));
+//        double volume = actionProbs[ACTION_SIZE];
+//
+//        return new Object[]{action, volume};
+        return null;
     }
 
     public static void train() {
@@ -151,7 +153,7 @@ public class SimplifiedDDPG {
                 double volumeActorTdError = volumeCritic.getTdError(volumnCriticReward.getReward(), gamma, volumnCriticReward.getState(), volumnCriticReward.getNextState());
 
                 // 3. 更新 Actor，使用更新後的 TD 誤差
-                volumeActor.updateWeights(state, volumeActorTdError, learningRate);
+//                volumeActor.updateWeights(state, volumeActorTdError, learningRate); // TODO
             }
 
             System.out.printf("\n");

@@ -1,13 +1,20 @@
 package binace.vo;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class QuoteVO {
+
     private Long openTime; // 开盘时间 (Unix 时间戳)
     private BigDecimal open; // 开盘价
     private BigDecimal high; // 最高价
