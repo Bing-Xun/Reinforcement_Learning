@@ -108,6 +108,11 @@ public class TransformerTrainer {
             double[][] lossGrad = MatrixUtils.subtractMatrix(result.outputPool, target); // (batch_size, 3), 1, 3
             double[][] d = MatrixUtils.unpoolGrad(lossGrad, 1, 6); // 6, 3
             double[][] gradW_proj = MatrixUtils.matMul(d, MatrixUtils.transposeMatrix(encoder.W_proj)); // 11, 3
+            System.out.println(String.format("d d[0]:%s, %s", d.length, d[0].length));
+            System.out.println(String.format("encoder.W_proj encoder.W_proj[0]:%s, %s", encoder.W_proj.length, encoder.W_proj[0].length));
+            double[][] dWp = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.attentionOutput), d);
+            System.out.println(String.format("gradW_proj gradW_proj[0]:%s, %s", gradW_proj.length, gradW_proj[0].length));
+
 
             // 步骤 1: 计算前馈网络部分的反向传播
             // 1.1 计算第一个权重矩阵 W1 的梯度
@@ -144,6 +149,15 @@ public class TransformerTrainer {
             double[][] dWk = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dK);
             double[][] dWv = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dScores);
 
+            // 梯度裁剪（防止梯度爆炸）
+            double maxNorm = 1.0;
+            dW1 = MatrixUtils.clipGradients(dW1, maxNorm);
+            dW2 = MatrixUtils.clipGradients(dW2, maxNorm);
+            dWv = MatrixUtils.clipGradients(dWv, maxNorm);
+            dWk = MatrixUtils.clipGradients(dWk, maxNorm);
+            dWq = MatrixUtils.clipGradients(dWq, maxNorm);
+            dWp = MatrixUtils.clipGradients(dWp, maxNorm);
+
             // 步骤 3: 更新权重
             // 假设我们使用学习率 lr
             double lr = 0.01;
@@ -154,6 +168,7 @@ public class TransformerTrainer {
             encoder.Wq = MatrixUtils.subtractMatrix(encoder.Wq, MatrixUtils.scaleMatrix(dWq, lr));
             encoder.Wk = MatrixUtils.subtractMatrix(encoder.Wk, MatrixUtils.scaleMatrix(dWk, lr));
             encoder.Wv = MatrixUtils.subtractMatrix(encoder.Wv, MatrixUtils.scaleMatrix(dWv, lr));
+            encoder.W_proj = MatrixUtils.subtractMatrix(encoder.W_proj, MatrixUtils.scaleMatrix(dWp, lr));
         }
     }
 
