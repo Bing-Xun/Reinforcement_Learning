@@ -21,38 +21,6 @@ public class TransformerEncoder {
         this.W_proj = MatrixUtils.randomMatrix(dModel, output_dim); // output_dim 可能是 3
     }
 
-//    public double[][] forward(double[][] input) {
-//
-//        /**
-//         * 步骤 2：计算 Q、K、V
-//         */
-//        double[][] Q = MatrixUtils.matMul(input, Wq);
-//        double[][] K = MatrixUtils.matMul(input, Wk);
-//        double[][] V = MatrixUtils.matMul(input, Wv);
-//
-//        double[][] scores = MatrixUtils.matMul(Q, MatrixUtils.transposeMatrix(K));
-//        MatrixUtils.scaleMatrix(scores, Math.sqrt(dModel));
-//
-//        /**
-//         * 步骤 3：计算自注意力（Scaled Dot-Product Attention）
-//         */
-//        double[][] attentionWeights = MatrixUtils.softmax(scores);
-//
-//        /**
-//         * attentionWeights：注意力权重矩阵，形状 (3×3)
-//         * V：值矩阵（Value Matrix），形状 (3×4)
-//         * attentionOutput：最终的注意力输出，形状 (3×4)
-//         */
-//        double[][] attentionOutput = MatrixUtils.matMul(attentionWeights, V);
-//
-//        // GELU 替换 ReLU
-//        double[][] ffOutput = MatrixUtils.gelu(MatrixUtils.matMul(attentionOutput, W1));
-//        ffOutput = MatrixUtils.matMul(ffOutput, W2);
-//
-//        double[][] Output = MatrixUtils.layerNorm(MatrixUtils.addMatrix(attentionOutput, ffOutput));
-//        return MatrixUtils.projectMatrix(Output, 2);
-//    }
-
     public TransformerForwardResult forward(double[][] input) {
         /**
          * 步骤 2：计算 Q、K、V
@@ -61,18 +29,13 @@ public class TransformerEncoder {
         double[][] K = MatrixUtils.matMul(input, Wk);
         double[][] V = MatrixUtils.matMul(input, Wv);
 
-        System.out.println(String.format("input input[0]:%s, %s", input.length, input[0].length));
-        System.out.println(String.format("Q Q[0]:%s, %s", Q.length, Q[0].length));
-        System.out.println(String.format("K K[0]:%s, %s", K.length, K[0].length));
         double[][] scores = MatrixUtils.matMul(Q, MatrixUtils.transposeMatrix(K));
-        System.out.println(String.format("scores scores[0]:%s, %s", scores.length, scores[0].length));
+//        System.out.println(String.format("scores scores[0]:%s, %s", scores.length, scores[0].length));
         MatrixUtils.scaleMatrix(scores, Math.sqrt(dModel));
 
         /**
          * 步骤 3：计算自注意力（Scaled Dot-Product Attention）
          */
-        System.out.println(String.format("2 scores scores[0]:%s, %s", scores.length, scores[0].length));
-        System.out.println(String.format("V V[0]:%s, %s", V.length, V[0].length));
         double[][] attentionWeights = MatrixUtils.softmax(scores);
         double[][] attentionOutput = MatrixUtils.matMul(attentionWeights, V);
 
@@ -80,10 +43,8 @@ public class TransformerEncoder {
         double[][] ffOutput = MatrixUtils.gelu(MatrixUtils.matMul(attentionOutput, W1));
         double[][] ffOutput1 = MatrixUtils.matMul(ffOutput, W2);
 
-        System.out.println(String.format("attentionWeights attentionWeights[0]:%s, %s", attentionWeights.length, attentionWeights[0].length));
-        System.out.println(String.format("attentionOutput attentionOutput[0]:%s, %s", attentionOutput.length, attentionOutput[0].length));
         double[][] Output = MatrixUtils.layerNorm(MatrixUtils.addMatrix(attentionOutput, ffOutput1));
-        double[][] projectedOutput = MatrixUtils.projectMatrix(Output, W_proj);
+        double[][] projectedOutput = MatrixUtils.matMul(Output, W_proj);
         double[][] projectedOutputPool = MatrixUtils.poolProject(projectedOutput);
 
         // 创建 TransformerForwardResult 来存储所有数据
