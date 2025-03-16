@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class ActorRewardVO {
 
-    private Double reward;
-    private Double[] state;
-    private Double[] nextState;
+    private double reward;
+    private double[][] state;
 }

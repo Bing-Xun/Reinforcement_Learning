@@ -133,20 +133,18 @@ public class BinanceAPI {
 //                        ", Taker Buy Base Asset Volume: " + takerBuyBaseAssetVolume +
 //                        ", Taker Buy Quote Asset Volume: " + takerBuyQuoteAssetVolume);
 
-                QuoteVO quoteVO = QuoteVO.builder()
-                        .openTime(openTime)
-                        .open(new BigDecimal(open))
-                        .high(new BigDecimal(high))
-                        .low(new BigDecimal(low))
-                        .close(new BigDecimal(close))
-                        .volume(new BigDecimal(volume))
-                        .closeTime(closeTime)
-                        .quoteAssetVolume(new BigDecimal(quoteAssetVolume))
-                        .trades(trades)
-                        .takerBuyBaseAssetVolume(new BigDecimal(takerBuyBaseAssetVolume))
-                        .takerBuyQuoteAssetVolume(new BigDecimal(takerBuyQuoteAssetVolume))
-                        .build();
-
+                QuoteVO quoteVO = new QuoteVO();
+                quoteVO.setOpenTime(openTime);
+                quoteVO.setOpen(new BigDecimal(open));
+                quoteVO.setHigh(new BigDecimal(high));
+                quoteVO.setLow(new BigDecimal(low));
+                quoteVO.setClose(new BigDecimal(close));
+                quoteVO.setVolume(new BigDecimal(volume));
+                quoteVO.setCloseTime(closeTime);
+                quoteVO.setQuoteAssetVolume(new BigDecimal(quoteAssetVolume));
+                quoteVO.setTrades(trades);
+                quoteVO.setTakerBuyBaseAssetVolume(new BigDecimal(takerBuyBaseAssetVolume));
+                quoteVO.setTakerBuyQuoteAssetVolume(new BigDecimal(takerBuyQuoteAssetVolume));
                 quoteVOList.add(quoteVO);
             }
 

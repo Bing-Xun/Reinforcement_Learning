@@ -1,18 +1,10 @@
 package binace.vo;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 public class QuoteVO {
 
     private Long openTime; // 开盘时间 (Unix 时间戳)
@@ -26,4 +18,38 @@ public class QuoteVO {
     private Long trades; // 成交笔数
     private BigDecimal takerBuyBaseAssetVolume; // 主动买入成交量 (基础货币)
     private BigDecimal takerBuyQuoteAssetVolume; // 主动买入成交额 (计价货币)
+
+    public QuoteVO() {
+
+    }
+
+    public QuoteVO(double[] d) {
+        this.openTime = (long) d[0];
+        this.open = BigDecimal.valueOf(d[1]);
+        this.high = BigDecimal.valueOf(d[2]);
+        this.low = BigDecimal.valueOf(d[3]);
+        this.close = BigDecimal.valueOf(d[4]);
+        this.volume = BigDecimal.valueOf(d[5]);
+        this.closeTime = (long) d[6];
+        this.quoteAssetVolume = BigDecimal.valueOf(d[7]);
+        this.trades = (long) d[8];
+        this.takerBuyBaseAssetVolume = BigDecimal.valueOf(d[9]);
+        this.takerBuyQuoteAssetVolume = BigDecimal.valueOf(d[10]);
+    }
+
+    public double[] toArray () {
+        return new double[] {
+            this.openTime.doubleValue()
+            , this.open.doubleValue()
+            , this.high.doubleValue()
+            , this.low.doubleValue()
+            , this.close.doubleValue()
+            , this.volume.doubleValue()
+            , this.closeTime.doubleValue()
+            , this.quoteAssetVolume.doubleValue()
+            , this.trades.doubleValue()
+            , this.takerBuyBaseAssetVolume.doubleValue()
+            , this.takerBuyQuoteAssetVolume.doubleValue()
+        };
+    }
 }

@@ -6,9 +6,11 @@ public class TransformerEncoder {
     public final int output_dim;
     public double[][] Wq, Wk, Wv, W1, W2;
     public double[][] W_proj; // output_dim 可能是 3
+    public int poolSizeRow = 6;
+    public int poolSizeCol = 1;
 
 
-    public TransformerEncoder(int dModel, int dHidden, int output_dim) {
+    public TransformerEncoder(int dModel, int dHidden, int output_dim, int poolSizeRow, int poolSizeCol) {
         this.dModel = dModel;
         this.dHidden = dHidden;
         this.output_dim = output_dim;
@@ -17,8 +19,10 @@ public class TransformerEncoder {
         this.Wv = MatrixUtils.heInit(dModel, dModel);
         this.W1 = MatrixUtils.heInit(dModel, dHidden);
         this.W2 = MatrixUtils.heInit(dHidden, dModel);
-
         this.W_proj = MatrixUtils.randomMatrix(dModel, output_dim); // output_dim 可能是 3
+
+        this.poolSizeRow = poolSizeRow;
+        this.poolSizeCol = poolSizeCol;
     }
 
     public TransformerForwardResult forward(double[][] input) {
@@ -45,7 +49,7 @@ public class TransformerEncoder {
 
         double[][] Output = MatrixUtils.layerNorm(MatrixUtils.addMatrix(attentionOutput, ffOutput1));
         double[][] projectedOutput = MatrixUtils.matMul(Output, W_proj);
-        double[][] projectedOutputPool = MatrixUtils.poolProject(projectedOutput);
+        double[][] projectedOutputPool = MatrixUtils.poolProject(projectedOutput, poolSizeRow, poolSizeCol);
 
         // 创建 TransformerForwardResult 来存储所有数据
         return new TransformerForwardResult(
@@ -99,7 +103,7 @@ public class TransformerEncoder {
          * 4 代表输入数据的 特征维度（dModel），即每个数据点有 4 个特征。
          * 8 代表 注意力头数（numHeads），即 Multi-Head Attention 的数量。
          */
-        TransformerEncoder encoder = new TransformerEncoder(4, 8, 3);
+        TransformerEncoder encoder = new TransformerEncoder(4, 8, 3, 6, 1);
 
         /**
          * input 是一个 3×4 的矩阵，表示 3 个输入数据，每个数据有 4 个特征。

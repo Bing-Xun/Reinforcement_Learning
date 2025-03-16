@@ -23,61 +23,77 @@ public class TransformerTrainer {
         for (int epoch = 0; epoch < epochs; epoch++) {
             // 前向传播
             TransformerEncoder.TransformerForwardResult result = encoder.forward(input);
-
-            // 计算投影层的梯度
             double[][] lossGrad = MatrixUtils.subtractMatrix(result.outputPool, target); // (batch_size, 3), 1, 3
-            double[][] d = MatrixUtils.unpoolGrad(lossGrad, 1, 6); // 6, 3
-            double[][] gradW_proj = MatrixUtils.matMul(d, MatrixUtils.transposeMatrix(encoder.W_proj)); // 11, 3
-            double[][] dWp = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.attentionOutput), d);
-
-            // 步骤 1: 计算前馈网络部分的反向传播
-            // 1.1 计算第一个权重矩阵 W1 的梯度
-            double[][] dAttentionOutput = MatrixUtils.matMul(gradW_proj, MatrixUtils.transposeMatrix(encoder.W2));
-            double[][] dW1 = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.attentionOutput), dAttentionOutput);
-
-            // 1.2 计算第二个权重矩阵 W2 的梯度
-            double[][] dFFOutput = MatrixUtils.matMul(dAttentionOutput, MatrixUtils.transposeMatrix(encoder.W1));
-            double[][] dW2 = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.ffOutput), dFFOutput);
-
-            // 步骤 2: 计算自注意力部分的反向传播
-            // 2.1 计算 attentionWeights 的梯度
-            double[][] dAttentionWeights = MatrixUtils.matMul(dFFOutput, MatrixUtils.transposeMatrix(encoder.Wv));
-
-            // 2.2 计算注意力分数 scores 的梯度
-            double[][] dScores = MatrixUtils.matMul(dAttentionWeights, MatrixUtils.transposeMatrix(encoder.Wv));
-            dScores = MatrixUtils.scaleMatrix(dScores, Math.sqrt(encoder.dModel));  // 缩放
-
-            // 2.3 计算 K 和 Q 的梯度
-            double[][] dK = MatrixUtils.matMul(dScores, MatrixUtils.transposeMatrix(encoder.Wq));
-            double[][] dQ = MatrixUtils.matMul(dScores, MatrixUtils.transposeMatrix(encoder.Wk));
-
-            // 2.4 计算 Q、K、V 权重矩阵 Wq, Wk, Wv 的梯度
-            double[][] dWq = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dQ);
-            double[][] dWk = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dK);
-            double[][] dWv = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dScores);
-
-            // 梯度裁剪（防止梯度爆炸）
-            double maxNorm = 1.0;
-            dW1 = MatrixUtils.clipGradients(dW1, maxNorm);
-            dW2 = MatrixUtils.clipGradients(dW2, maxNorm);
-            dWv = MatrixUtils.clipGradients(dWv, maxNorm);
-            dWk = MatrixUtils.clipGradients(dWk, maxNorm);
-            dWq = MatrixUtils.clipGradients(dWq, maxNorm);
-            dWp = MatrixUtils.clipGradients(dWp, maxNorm);
-
-            // 步骤 3: 更新权重
-            // 更新 W1, W2, Wq, Wk, Wv
-            encoder.W1 = MatrixUtils.subtractMatrix(encoder.W1, MatrixUtils.scaleMatrix(dW1, learningRate));
-            encoder.W2 = MatrixUtils.subtractMatrix(encoder.W2, MatrixUtils.scaleMatrix(dW2, learningRate));
-            encoder.Wq = MatrixUtils.subtractMatrix(encoder.Wq, MatrixUtils.scaleMatrix(dWq, learningRate));
-            encoder.Wk = MatrixUtils.subtractMatrix(encoder.Wk, MatrixUtils.scaleMatrix(dWk, learningRate));
-            encoder.Wv = MatrixUtils.subtractMatrix(encoder.Wv, MatrixUtils.scaleMatrix(dWv, learningRate));
-            encoder.W_proj = MatrixUtils.subtractMatrix(encoder.W_proj, MatrixUtils.scaleMatrix(dWp, learningRate));
+            train(input, result, lossGrad);
         }
     }
 
+    public void train(double[][] input, TransformerEncoder.TransformerForwardResult result, double[][] lossGrad, int epochs) {
+        for (int epoch = 0; epoch < epochs; epoch++) {
+            // 前向传播
+            train(input, result, lossGrad);
+        }
+    }
+
+//    public void train(double[][] input, double[][] target) {
+    private void train(double[][] input, TransformerEncoder.TransformerForwardResult result, double[][] lossGrad) {
+        // 前向传播
+//        TransformerEncoder.TransformerForwardResult result = encoder.forward(input);
+
+        // 计算投影层的梯度
+//        double[][] lossGrad = MatrixUtils.subtractMatrix(result.outputPool, target); // (batch_size, 3), 1, 3
+        double[][] d = MatrixUtils.unpoolGrad(lossGrad, 1, 6); // d:(6,3), lossGrad:(1,3)
+//        double[][] d = MatrixUtils.unpoolGrad(lossGrad, encoder.poolSizeCol, encoder.poolSizeRow); // 6, 3, 這邊是用transformer才會對應target的梯度, 換成ddpg已給梯度
+        double[][] gradW_proj = MatrixUtils.matMul(d, MatrixUtils.transposeMatrix(encoder.W_proj)); // W_proj(11, 3)
+        double[][] dWp = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.attentionOutput), d);
+
+        // 步骤 1: 计算前馈网络部分的反向传播
+        // 1.1 计算第一个权重矩阵 W1 的梯度
+        double[][] dAttentionOutput = MatrixUtils.matMul(gradW_proj, MatrixUtils.transposeMatrix(encoder.W2));
+        double[][] dW1 = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.attentionOutput), dAttentionOutput);
+
+        // 1.2 计算第二个权重矩阵 W2 的梯度
+        double[][] dFFOutput = MatrixUtils.matMul(dAttentionOutput, MatrixUtils.transposeMatrix(encoder.W1));
+        double[][] dW2 = MatrixUtils.matMul(MatrixUtils.transposeMatrix(result.ffOutput), dFFOutput);
+
+        // 步骤 2: 计算自注意力部分的反向传播
+        // 2.1 计算 attentionWeights 的梯度
+        double[][] dAttentionWeights = MatrixUtils.matMul(dFFOutput, MatrixUtils.transposeMatrix(encoder.Wv));
+
+        // 2.2 计算注意力分数 scores 的梯度
+        double[][] dScores = MatrixUtils.matMul(dAttentionWeights, MatrixUtils.transposeMatrix(encoder.Wv));
+        dScores = MatrixUtils.scaleMatrix(dScores, Math.sqrt(encoder.dModel));  // 缩放
+
+        // 2.3 计算 K 和 Q 的梯度
+        double[][] dK = MatrixUtils.matMul(dScores, MatrixUtils.transposeMatrix(encoder.Wq));
+        double[][] dQ = MatrixUtils.matMul(dScores, MatrixUtils.transposeMatrix(encoder.Wk));
+
+        // 2.4 计算 Q、K、V 权重矩阵 Wq, Wk, Wv 的梯度
+        double[][] dWq = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dQ);
+        double[][] dWk = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dK);
+        double[][] dWv = MatrixUtils.matMul(MatrixUtils.transposeMatrix(input), dScores);
+
+        // 梯度裁剪（防止梯度爆炸）
+        double maxNorm = 1.0;
+        dW1 = MatrixUtils.clipGradients(dW1, maxNorm);
+        dW2 = MatrixUtils.clipGradients(dW2, maxNorm);
+        dWv = MatrixUtils.clipGradients(dWv, maxNorm);
+        dWk = MatrixUtils.clipGradients(dWk, maxNorm);
+        dWq = MatrixUtils.clipGradients(dWq, maxNorm);
+        dWp = MatrixUtils.clipGradients(dWp, maxNorm);
+
+        // 步骤 3: 更新权重
+        // 更新 W1, W2, Wq, Wk, Wv
+        encoder.W1 = MatrixUtils.subtractMatrix(encoder.W1, MatrixUtils.scaleMatrix(dW1, learningRate));
+        encoder.W2 = MatrixUtils.subtractMatrix(encoder.W2, MatrixUtils.scaleMatrix(dW2, learningRate));
+        encoder.Wq = MatrixUtils.subtractMatrix(encoder.Wq, MatrixUtils.scaleMatrix(dWq, learningRate));
+        encoder.Wk = MatrixUtils.subtractMatrix(encoder.Wk, MatrixUtils.scaleMatrix(dWk, learningRate));
+        encoder.Wv = MatrixUtils.subtractMatrix(encoder.Wv, MatrixUtils.scaleMatrix(dWv, learningRate));
+        encoder.W_proj = MatrixUtils.subtractMatrix(encoder.W_proj, MatrixUtils.scaleMatrix(dWp, learningRate));
+    }
+
     public static void main(String[] args) throws Exception {
-        TransformerEncoder encoder = new TransformerEncoder(11, 33, 3);
+        TransformerEncoder encoder = new TransformerEncoder(11, 33, 3, 6, 1);
         TransformerTrainer trainer = new TransformerTrainer(encoder, 0.01);
 
         List<QuoteVO> quoteVOList = DDPGMain.getDataList();
@@ -93,7 +109,7 @@ public class TransformerTrainer {
         System.out.println(Arrays.deepToString(o.getTarget()));
     }
 
-    private static List<TrainData> getTrainData(List<QuoteVO> quoteVOList) {
+    public static List<TrainData> getTrainData(List<QuoteVO> quoteVOList) {
         int beforeN = 6;
         int afterN = 3;
         int s = beforeN -1;

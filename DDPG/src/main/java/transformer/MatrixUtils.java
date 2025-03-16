@@ -191,8 +191,8 @@ public class MatrixUtils {
     /**
      * 降維度
      */
-    public static double[][] poolProject(double[][] projected) {
-        double[][] pooled = meanPooling(projected); // 然后进行池化操作（例如均值池化）
+    public static double[][] poolProject(double[][] projected, int poolSizeRow, int poolSizeCol) {
+        double[][] pooled = meanPooling(projected, poolSizeRow, poolSizeCol); // 然后进行池化操作（例如均值池化）
         return softmax(pooled); // 最后进行 softmax 归一化
     }
 
@@ -215,20 +215,69 @@ public class MatrixUtils {
         return unpooled;
     }
 
-
     // 计算均值池化，适用于 Transformer 输出降维
-    public static double[][] meanPooling(double[][] matrix) {
-        int rows = matrix.length;
-        int cols = matrix[0].length;
-        double[] pooled = new double[cols];
+    /**
+     *  這個要用除的看比較清楚
+     * 池化大小 poolSizeRow=2, poolSizeCol=1，表示 每 2 行求平均
+     * double[][] a = {
+     *     {1, 2, 3},
+     *     {4, 5, 6},
+     *     {7, 8, 9},
+     *     {10, 11, 12}
+     * };
+     * double[][] result = meanPooling(a, 2, 1);
+     * 结果: {{2.5, 3.5, 4.5}, {8.5, 9.5, 10.5}}
+     *
+     *
+     * 池化大小 poolSizeRow=1, poolSizeCol=2，表示 每 2 列求平均
+     * double[][] a = {
+     *     {1, 2, 3, 4},
+     *     {5, 6, 7, 8}
+     * };
+     * double[][] result = meanPooling(a, 1, 2);
+     * // 结果: {{1.5, 3.5}, {5.5, 7.5}}
+     *
+     *
+     * 池化大小 poolSizeRow=2, poolSizeCol=2，表示 每 2×2 塊求平均：
+     * double[][] a = {
+     *     {1, 2, 3, 4},
+     *     {5, 6, 7, 8},
+     *     {9, 10, 11, 12},
+     *     {13, 14, 15, 16}
+     * };
+     * double[][] result = meanPooling(a, 2, 2);
+     * // 结果: {{3.5, 5.5}, {11.5, 13.5}}
+     *
+     * @param a
+     * @param poolSizeRow
+     * @param poolSizeCol
+     * @return
+     */
+    public static double[][] meanPooling(double[][] a, int poolSizeRow, int poolSizeCol) {
+        int rows = a.length;
+        int cols = a[0].length;
 
-        for (int j = 0; j < cols; j++) {
-            double sum = 0.0;
-            for (int i = 0; i < rows; i++) {
-                sum += matrix[i][j];
+        // 計算池化後的新維度
+        int newRows = rows / poolSizeRow;
+        int newCols = cols / poolSizeCol;
+
+        double[][] pooled = new double[newRows][newCols];
+
+        for (int i = 0; i < newRows; i++) {
+            for (int j = 0; j < newCols; j++) {
+                double sum = 0.0;
+
+                // 池化區塊內累加數值
+                for (int x = 0; x < poolSizeRow; x++) {
+                    for (int y = 0; y < poolSizeCol; y++) {
+                        sum += a[i * poolSizeRow + x][j * poolSizeCol + y];
+                    }
+                }
+
+                // 計算區塊內的平均值
+                pooled[i][j] = sum / (poolSizeRow * poolSizeCol);
             }
-            pooled[j] = sum / rows; // 取平均值
         }
-        return new double[][] { pooled }; // 返回 (1, d_model)
+        return pooled;
     }
 }
