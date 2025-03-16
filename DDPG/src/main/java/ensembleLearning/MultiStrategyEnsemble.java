@@ -108,7 +108,9 @@ public class MultiStrategyEnsemble {
     private static List<QuoteVO> getDataList() throws Exception {
         String filePath = "DDPG/data1m.json";
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new File(filePath), new TypeReference<>(){});
+        List<QuoteVO> list = objectMapper.readValue(new File(filePath), new TypeReference<>(){});
+
+        return list.subList(list.size() - 20000, list.size() - 10000);
     }
 
 }
