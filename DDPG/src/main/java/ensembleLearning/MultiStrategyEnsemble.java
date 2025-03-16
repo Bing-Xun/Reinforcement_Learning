@@ -42,12 +42,11 @@ public class MultiStrategyEnsemble {
             map.put(element, map.getOrDefault(element, 0) + 1);
         }
 
-        // 打印 Map
-        System.out.println("統計結果: " + map);
-
-        // 找到出現次數最高的元素
         String mostFrequentElement = findMostFrequentElement(map);
-        System.out.println("出現次數最高的元素: " + mostFrequentElement);
+        if(!mostFrequentElement.equals("HOLD")) {
+            System.out.println("統計結果: " + map);
+            System.out.println("出現次數最高的元素: " + mostFrequentElement);
+        }
 
         return mostFrequentElement;
     }
@@ -96,12 +95,14 @@ public class MultiStrategyEnsemble {
                 position.modifyPosition(price, 0.0008, 1);
             }
 
-            System.out.println("###");
+//            System.out.println("###");
 //            System.out.println(position.getAmount());
 //            System.out.println(position.getPositionCnt());
 
-            double b = position.getPositionCnt() * price.doubleValue();
-            System.out.println(position.getAmount().add(new BigDecimal(b)));
+            if(Set.of("BUY", "SELL").contains(s)) {
+                double b = position.getPositionCnt() * price.doubleValue();
+                System.out.println(position.getAmount().add(new BigDecimal(b)));
+            }
         }
     }
 
@@ -110,7 +111,8 @@ public class MultiStrategyEnsemble {
         ObjectMapper objectMapper = new ObjectMapper();
         List<QuoteVO> list = objectMapper.readValue(new File(filePath), new TypeReference<>(){});
 
-        return list.subList(list.size() - 20000, list.size() - 10000);
+        return list;
+//        return list.subList(list.size() - 20000, list.size() - 10000);
     }
 
 }
