@@ -106,7 +106,7 @@ public class MultiStrategyEnsemble {
     }
 
     private static List<QuoteVO> getDataList() throws Exception {
-        String filePath = "/Users/bing/Desktop/Reinforcement_Learning/DDPG/data2.json";
+        String filePath = "DDPG/data1m.json";
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(new File(filePath), new TypeReference<>(){});
     }
