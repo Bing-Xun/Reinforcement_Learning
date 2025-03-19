@@ -1,10 +1,15 @@
 package ensembleLearning;
 
 import binace.vo.QuoteVO;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ddpg.action.position.Position;
 import ensembleLearning.strategy.Strategy;
+import ensembleLearning.strategy.vo.ActionVO;
+import ensembleLearning.strategy.vo.StrategyVO;
+import graph.DataPoint;
+import graph.PriceChart;
 import org.reflections.Reflections;
 
 import java.io.File;
@@ -13,6 +18,7 @@ import java.util.*;
 
 public class MultiStrategyEnsemble {
 
+    private static ObjectMapper objectMapper = new ObjectMapper();;
 
     // 使用 Reflections 掃描類路徑
     public static List<Strategy> loadStrategies() {
@@ -35,10 +41,13 @@ public class MultiStrategyEnsemble {
         return strategies;
     }
 
-    private String getAction(List<String> list) {
+    private ActionVO getAction(List<StrategyVO> strategyVOList) throws Exception {
         // 統計每個元素的出現次數
+        List<String> actionList = strategyVOList.stream().map(StrategyVO::getAction).toList();
+        List<String> StrategyNameList = strategyVOList.stream().map(StrategyVO::getStrategyName).toList();
+
         Map<String, Integer> map = new HashMap<>();
-        for (String element : list) {
+        for (String element : actionList) {
             map.put(element, map.getOrDefault(element, 0) + 1);
         }
 
@@ -46,9 +55,13 @@ public class MultiStrategyEnsemble {
         if(!mostFrequentElement.equals("HOLD")) {
             System.out.println("統計結果: " + map);
             System.out.println("出現次數最高的元素: " + mostFrequentElement);
+            System.out.println("策略名稱: " + objectMapper.writeValueAsString(strategyVOList));
         }
 
-        return mostFrequentElement;
+        return ActionVO.builder()
+            .action(mostFrequentElement)
+            .closeTime(strategyVOList.getLast().getCloseTime())
+            .build();
     }
 
     // 找到出現次數最高的元素
@@ -74,40 +87,67 @@ public class MultiStrategyEnsemble {
         Position position = new Position();
         position.setAmount(new BigDecimal(1000));
 
+        List<DataPoint> dataPoints = new ArrayList<>();
         List<QuoteVO> quoteVOList = getDataList();
         for(int i=30; i<quoteVOList.size(); i++) {
             List<QuoteVO> subList = quoteVOList.subList(i-30, i);
             BigDecimal price = subList.getLast().getClose();
 
-            List<String> actionList = new ArrayList<>();
+            List<StrategyVO> strategyVOList = new ArrayList<>();
             // 執行每個策略的 predict 方法
             for (Strategy strategy : strategies) {
-                String prediction = strategy.predict(subList);
+                StrategyVO vo = strategy.predict(subList);
 //            System.out.println(prediction);
-                actionList.add(prediction);
+                strategyVOList.add(vo);
             }
 
-            String s = ensemble.getAction(actionList);
-            if("BUY".equals(s)) {
+            ActionVO actionVO = ensemble.getAction(strategyVOList);
+            String action = actionVO.getAction();
+            if("BUY".equals(action)) {
                 position.modifyPosition(price, 0.0008, 0);
             }
-            if("SELL".equals(s)) {
+            if("SELL".equals(action)) {
                 position.modifyPosition(price, 0.0008, 1);
             }
+
+            // 多兩個風控條件
+            Double priceD = price.doubleValue();
+            Double positionPrice = position.getPrice().doubleValue();
+            if((positionPrice - (positionPrice * 0.1)) > priceD) {
+                position.modifyPosition(price, position.getPositionCnt(), 1);
+            }
+//            if((positionPrice + (positionPrice * 0.05)) > priceD) {
+//                position.modifyPosition(price, position.getPositionCnt() / 10, 1);
+//            }
 
 //            System.out.println("###");
 //            System.out.println(position.getAmount());
 //            System.out.println(position.getPositionCnt());
 
-            if(Set.of("BUY", "SELL").contains(s)) {
+            DataPoint dataPoint = new DataPoint(
+                price
+                , new BigDecimal(position.getPositionCnt())
+                , subList.getLast().getCloseTime()
+                , action.equals("HOLD") ? "" : actionVO.getAction() + ":" + actionVO.getCloseTime());
+
+            dataPoints.add(dataPoint);
+
+            if(Set.of("BUY", "SELL").contains(action)) {
                 double b = position.getPositionCnt() * price.doubleValue();
                 System.out.println(position.getAmount().add(new BigDecimal(b)));
             }
         }
+
+        PriceChart.plot(dataPoints);
     }
 
     private static List<QuoteVO> getDataList() throws Exception {
-        String filePath = "DDPG/data1m.json";
+//        String filePath = "DDPG/data1m.json";
+//        String filePath = "DDPG/data3m.json";
+//        String filePath = "DDPG/data5m.json";
+//        String filePath = "DDPG/data15m.json";
+        String filePath = "DDPG/data1h.json";
+
         ObjectMapper objectMapper = new ObjectMapper();
         List<QuoteVO> list = objectMapper.readValue(new File(filePath), new TypeReference<>(){});
 

@@ -2,20 +2,20 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.MFITrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.OBVTrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class OBVStrategy implements Strategy {
+public class OBVStrategy implements Strategy { // 2
+//public class OBVStrategy {
 
     public String predict(double[] closePrices, double[]  volumes) {
         List<String> signals = OBVTrading.generateSignals(closePrices, volumes);
         return signals.get(closePrices.length-1);
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] closePrices = new double[quoteVOList.size()];
         double[] volumes = new double[quoteVOList.size()];
 
@@ -25,7 +25,11 @@ public class OBVStrategy implements Strategy {
             volumes[i] = quote.getVolume().doubleValue();
         }
 
-        return predict(closePrices, volumes);
+        return StrategyVO.builder()
+            .strategyName("OBVStrategy")
+            .action(predict(closePrices, volumes))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

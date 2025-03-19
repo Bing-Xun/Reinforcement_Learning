@@ -2,10 +2,9 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.MACDTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.RSITrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class RSIStrategy implements Strategy {
@@ -18,11 +17,16 @@ public class RSIStrategy implements Strategy {
         return signals.get(prices.length-1);
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
-        return predict(prices);
+
+        return StrategyVO.builder()
+            .strategyName("RSIStrategy")
+            .action(predict(prices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

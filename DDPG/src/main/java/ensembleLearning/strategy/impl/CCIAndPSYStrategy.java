@@ -2,10 +2,9 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.BollingerBandsTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.CCIAndPSYTrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class CCIAndPSYStrategy implements Strategy {
@@ -19,11 +18,16 @@ public class CCIAndPSYStrategy implements Strategy {
         return psySignals.get(Math.min(prices.length-1, psySignals.size() -1));
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
-        return predict(prices);
+
+        return StrategyVO.builder()
+            .strategyName("CCIAndPSYStrategy")
+            .action(predict(prices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

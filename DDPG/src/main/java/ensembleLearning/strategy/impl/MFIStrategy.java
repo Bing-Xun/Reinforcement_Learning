@@ -2,10 +2,9 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.MFITrading;
-import feature.RSITrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MFIStrategy implements Strategy {
@@ -17,7 +16,7 @@ public class MFIStrategy implements Strategy {
         return signals.get(closePrices.length-1);
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
         double[] closePrices = new double[quoteVOList.size()];
@@ -31,7 +30,11 @@ public class MFIStrategy implements Strategy {
             volumes[i] = quote.getVolume().doubleValue();
         }
 
-        return predict(highPrices, lowPrices, closePrices, volumes);
+        return StrategyVO.builder()
+            .strategyName("MFIStrategy")
+            .action(predict(highPrices, lowPrices, closePrices, volumes))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

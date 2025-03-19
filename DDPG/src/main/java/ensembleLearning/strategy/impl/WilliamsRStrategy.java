@@ -2,10 +2,9 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.StochasticOscillatorTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.WilliamsRTrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class WilliamsRStrategy implements Strategy {
@@ -17,7 +16,7 @@ public class WilliamsRStrategy implements Strategy {
         return signals.get(closePrices.length-1);
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
         double[] closePrices = new double[quoteVOList.size()];
@@ -29,7 +28,11 @@ public class WilliamsRStrategy implements Strategy {
             closePrices[i] = quote.getClose().doubleValue();
         }
 
-        return predict(highPrices, lowPrices, closePrices);
+        return StrategyVO.builder()
+            .strategyName("WilliamsRStrategy")
+            .action(predict(highPrices, lowPrices, closePrices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

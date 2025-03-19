@@ -2,13 +2,13 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.OBVTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.ParabolicSARTrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class ParabolicSARStrategy implements Strategy {
+public class ParabolicSARStrategy implements Strategy { // 2
+//public class ParabolicSARStrategy {
 
     private double afStart = 0.02;
     private double afIncrement = 0.02;
@@ -19,7 +19,7 @@ public class ParabolicSARStrategy implements Strategy {
         return signals.get(Math.min(highPrices.length-1, signals.size()-1));
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
         double[] closePrices = new double[quoteVOList.size()];
@@ -31,7 +31,11 @@ public class ParabolicSARStrategy implements Strategy {
             lowPrices[i] = quote.getLow().doubleValue();
         }
 
-        return predict(closePrices, volumes);
+        return StrategyVO.builder()
+            .strategyName("ParabolicSARStrategy")
+            .action(predict(closePrices, volumes))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

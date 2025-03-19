@@ -2,8 +2,8 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.EMATrading;
-import feature.MACDTrading;
 
 import java.util.List;
 
@@ -18,11 +18,16 @@ public class EMAStrategy implements Strategy {
         return signals.get(prices.length-1);
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
-        return predict(prices);
+
+        return StrategyVO.builder()
+            .strategyName("EMAStrategy")
+            .action(predict(prices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

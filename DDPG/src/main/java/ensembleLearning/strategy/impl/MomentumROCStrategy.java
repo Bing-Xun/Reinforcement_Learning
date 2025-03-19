@@ -2,13 +2,13 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.MACDTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.MomentumROCTrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class MomentumROCStrategy implements Strategy {
+public class MomentumROCStrategy implements Strategy { // 2
+//public class MomentumROCStrategy {
 
     private int period = 10;
 
@@ -23,11 +23,16 @@ public class MomentumROCStrategy implements Strategy {
         return mtmAction.equals(rocAction) ? mtmAction : "N/A"; // 若兩個動作相等則回傳, 不等回傳 N/A
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
-        return predict(prices);
+
+        return StrategyVO.builder()
+            .strategyName("MomentumROCStrategy")
+            .action(predict(prices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

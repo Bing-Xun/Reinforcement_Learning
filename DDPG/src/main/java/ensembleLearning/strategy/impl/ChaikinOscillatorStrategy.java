@@ -2,14 +2,13 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
-import feature.CCIAndPSYTrading;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.ChaikinOscillatorTrading;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class ChaikinOscillatorStrategy implements Strategy {
+public class ChaikinOscillatorStrategy implements Strategy {  // 2
+//public class ChaikinOscillatorStrategy {
 
     private int fastPeriod = 3;
     private int slowPeriod = 10;
@@ -20,7 +19,7 @@ public class ChaikinOscillatorStrategy implements Strategy {
         return signals.get(Math.min(closePrices.length-1,signals.size()-1));
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
         double[] closePrices = new double[quoteVOList.size()];
@@ -34,7 +33,11 @@ public class ChaikinOscillatorStrategy implements Strategy {
             volumes[i] = quote.getVolume().doubleValue();
         }
 
-        return predict(highPrices, lowPrices, closePrices, volumes);
+        return StrategyVO.builder()
+            .strategyName("ChaikinOscillatorStrategy")
+            .action(predict(highPrices, lowPrices, closePrices, volumes))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {

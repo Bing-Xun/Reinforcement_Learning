@@ -2,13 +2,14 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
+import ensembleLearning.strategy.vo.StrategyVO;
 import feature.BiasRatioTrading;
-import feature.EMATrading;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class BiasRatioStrategy implements Strategy {
+//public class BiasRatioStrategy implements Strategy {
+public class BiasRatioStrategy {
+
 
     private int period = 12;
     private double buyThreshold = -4; // 根據市場情況和回測調整
@@ -20,11 +21,16 @@ public class BiasRatioStrategy implements Strategy {
         return signals.get(Math.min(prices.length-1,signals.size()-1));
     }
 
-    public String predict(List<QuoteVO> quoteVOList) {
+    public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
-        return predict(prices);
+
+        return StrategyVO.builder()
+            .strategyName("BiasRatioStrategy")
+            .action(predict(prices))
+            .closeTime(quoteVOList.getLast().getCloseTime())
+            .build();
     }
 
     public static void main(String[] args) {
