@@ -17,23 +17,23 @@ import java.util.List;
 public class JsonFileExample {
 
     public static void main(String[] args) {
-//        int quoteCnt = 98142;
+//        int quoteCnt = 107733;
 //        List<QuoteEntity> list = getQuoteList("quote_btc_1m", quoteCnt);
 //        String filePath = "DDPG/data1m.json";
 
-//        int quoteCnt = 35497;
+//        int quoteCnt = 38694;
 //        List<QuoteEntity> list = getQuoteList("quote_btc_3m", quoteCnt);
 //        String filePath = "DDPG/data3m.json";
 
-//        int quoteCnt = 22498;
+//        int quoteCnt = 24416;
 //        List<QuoteEntity> list = getQuoteList("quote_btc_5m", quoteCnt);
 //        String filePath = "DDPG/data5m.json";
 
-//        int quoteCnt = 8779;
+//        int quoteCnt = 9418;
 //        List<QuoteEntity> list = getQuoteList("quote_btc_15m", quoteCnt);
 //        String filePath = "DDPG/data15m.json";
 
-        int quoteCnt = 2945;
+        int quoteCnt = 3105;
         List<QuoteEntity> list = getQuoteList("quote_btc_1h", quoteCnt);
         String filePath = "DDPG/data1h.json";
 
