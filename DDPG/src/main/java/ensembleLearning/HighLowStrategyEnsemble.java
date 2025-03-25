@@ -28,8 +28,6 @@ public class HighLowStrategyEnsemble {
         List<Strategy> strategies = List.of(
             new HighLowLongStrategy()
             , new TrendStrategy()
-//            , new HighLowMiddleStrategy()
-//            , new HighLowStrategy()
         );
 
         BigDecimal initAmount = new BigDecimal(1000);
@@ -41,6 +39,7 @@ public class HighLowStrategyEnsemble {
 
         List<DataPoint> dataPoints = new ArrayList<>();
         List<DataPoint> earnPoints = new ArrayList<>();
+        List<DataPoint> amountPoints = new ArrayList<>();
         List<QuoteVO> quoteVOList = getDataList();
         int holdCnt = 0;
         int sellCnt = 0;
@@ -48,30 +47,14 @@ public class HighLowStrategyEnsemble {
         int tickI = 7200;
         for(int i=tickI; i<quoteVOList.size(); i++) {
             List<QuoteVO> longList = quoteVOList.subList(i-tickI, i);
-//            List<QuoteVO> middleList = quoteVOList.subList(i-(tickI/2), i);
-//            List<QuoteVO> shortList = quoteVOList.subList(i-(tickI/4), i);
             BigDecimal price = longList.getLast().getClose();
             Long closeTime = longList.getLast().getCloseTime();
 
             List<StrategyVO> strategyVOList = new ArrayList<>();
             // 執行每個策略的 predict 方法
             for (Strategy strategy : strategies) {
-                if("HighLowLongStrategy".equals(strategy.getStrategyName())) {
-                    StrategyVO vo = strategy.predict(longList);
-                    strategyVOList.add(vo);
-                }
-                if("TrendStrategy".equals(strategy.getStrategyName())) {
-                    StrategyVO vo = strategy.predict(longList);
-                    strategyVOList.add(vo);
-                }
-                if("HighLowMiddleStrategy".equals(strategy.getStrategyName())) {
-//                    StrategyVO vo = strategy.predict(middleList);
-//                    strategyVOList.add(vo);
-                }
-                if("HighLowShortStrategy".equals(strategy.getStrategyName())) {
-//                    StrategyVO vo = strategy.predict(shortList);
-//                    strategyVOList.add(vo);
-                }
+                StrategyVO vo = strategy.predict(longList);
+                strategyVOList.add(vo);
             }
 
             ActionVO actionVO = StrategyUtil.getAction(strategyVOList);
@@ -82,8 +65,9 @@ public class HighLowStrategyEnsemble {
             }
 
             if("BUY".equals(action)) {
+                action = "HOLD";
 //                if(Math.abs(price.doubleValue() - position.getPrice().doubleValue()) > price.doubleValue() * 0.06) {
-                if(Math.abs(price.doubleValue() - buyPrice.doubleValue()) > price.doubleValue() * 0.02) {
+                if(Math.abs(price.doubleValue() - buyPrice.doubleValue()) > price.doubleValue() * 0.015) {
                     if(position.getAmount().doubleValue() > getBuyTradePosition(price, new BigDecimal(1000)) * price.doubleValue()) {
                         position.modifyPosition(price, getBuyTradePosition(price, new BigDecimal(1000)), 0);
                         buyPrice = price;
@@ -93,16 +77,25 @@ public class HighLowStrategyEnsemble {
 
                         maxAmount = Math.max(position.getAmount().doubleValue(), maxAmount);
                         minAmount = Math.min(position.getAmount().doubleValue(), minAmount);
+                        action = "BUY";
                     }
-                } else {
-                    action = "HOLD";
                 }
             }
 
             if("SELL".equals(action)) {
-                if(Math.abs(price.doubleValue() - sellPrice.doubleValue()) > price.doubleValue() * 0.02) {
-                    if(position.getPositionCnt() > getSellTradePosition(price, new BigDecimal(1000))) {
-                        position.modifyPosition(price, getSellTradePosition(price, new BigDecimal(1000)), 1);
+                action = "HOLD";
+                if(Math.abs(price.doubleValue() - sellPrice.doubleValue()) > price.doubleValue() * 0.015) {
+//                    if(position.getPositionCnt() > getSellTradePosition(price, new BigDecimal(1000))) {
+//                        position.modifyPosition(price, getSellTradePosition(price, new BigDecimal(1000)), 1);
+                    if(position.getPositionCnt() > 0.0) {
+//                        System.out.println(String.format("price:%s, amount%s, positionPrice:%s, positionCnt:%s", price, position.getAmount(), position.getPrice(), position.getPositionCnt()));
+                        position.modifyPosition(price, position.getPositionCnt(), 1);
+//                        System.out.println(String.format("positionAmount:%s", position.getAmount()));
+
+                        if(position.getAmount().doubleValue() > 1000.0) {
+                            System.out.println(position);
+                        }
+
                         sellPrice = price;
                         sellCnt++;
                         buySellCnt -= 1;
@@ -110,15 +103,16 @@ public class HighLowStrategyEnsemble {
 
                         if(position.getAmount().compareTo(initAmount) == 1) {
                             BigDecimal earn = position.getAmount().subtract(initAmount);
-                            earnAmount.add(earn);
-                            position.setAmount(initAmount);
+                            BigDecimal earnPer = new BigDecimal(earn.doubleValue() * 1);
+                            earnAmount = earnAmount.add(earnPer);
+                            position.setAmount(position.getAmount().subtract(earnPer));
                         }
 
                         maxAmount = Math.max(position.getAmount().doubleValue(), maxAmount);
                         minAmount = Math.min(position.getAmount().doubleValue(), minAmount);
+
+                        action = "SELL";
                     }
-                } else {
-                    action = "HOLD";
                 }
             }
 
@@ -160,6 +154,14 @@ public class HighLowStrategyEnsemble {
                 , "");
             earnPoints.add(earnPoint);
 
+            DataPoint amountPoint = new DataPoint(
+                position.getAmount()
+                , new BigDecimal(position.getPositionCnt())
+                , closeTime
+//                , action.equals("HOLD") ? "" : actionVO.getAction() + ":" + actionVO.getCloseTime());
+                , "");
+            amountPoints.add(amountPoint);
+
             if(Set.of("BUY", "SELL").contains(action)) {
                 System.out.println(position.getAmount().add(new BigDecimal(b)) + ":" + position.getAmount());
             }
@@ -174,6 +176,7 @@ public class HighLowStrategyEnsemble {
 
 //        PriceChart.plot(dataPoints);
 //        PriceChart.plot(earnPoints);
+//        PriceChart.plot(amountPoints);
     }
 
     private static List<QuoteVO> getDataList() throws Exception {
@@ -205,8 +208,6 @@ public class HighLowStrategyEnsemble {
 
     private static Double getSellTradePosition(BigDecimal price, BigDecimal initAmount) {
         double rate = sellRate + ((rateTick * (buySellCnt > 0 ? 0 : -buySellCnt)));
-//        System.out.println("buySellCnt:"+buySellCnt);
-//        System.out.println("sellRate:"+rate);
         return initAmount.doubleValue() * rate / price.doubleValue();
     }
 }

@@ -16,14 +16,14 @@ public class HighLowLongTrading {
                 .boxed() // 將 double 轉換為 Double
                 .collect(java.util.stream.Collectors.toList());
 
-        Double indexD = closePrices[closePrices.length-1];
+        Double perD = closePrices[closePrices.length-1];
         List<Double> decileList = HighLowStrategyUtil.calculatePercentiles(closePricesList);
-        int decile = HighLowStrategyUtil.getPercentile(indexD, decileList);
+        int decile = HighLowStrategyUtil.getPercentile(perD, decileList);
 
         String action = "HOLD";
         Integer weight = 1;
 
-        if(decile > 70) {
+        if(decile > 85) {
             action = "SELL";
             weight = 2;
         }

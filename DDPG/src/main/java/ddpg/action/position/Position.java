@@ -36,7 +36,7 @@ public class Position {
             if (this.positionCnt == 0) return 0;
             if (this.positionCnt < positionCnt) return 0;
 
-            this.amount = this.amount.add(this.price.multiply(BigDecimal.valueOf(positionCnt)));
+            this.amount = this.amount.add(price.multiply(BigDecimal.valueOf(positionCnt)));
             this.positionCnt = this.positionCnt - positionCnt;
 
             if(this.positionCnt == 0) this.price = BigDecimal.ZERO;
