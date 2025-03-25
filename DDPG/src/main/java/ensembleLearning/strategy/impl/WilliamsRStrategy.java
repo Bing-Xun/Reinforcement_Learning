@@ -9,6 +9,7 @@ import java.util.List;
 
 public class WilliamsRStrategy implements Strategy {
 
+    private String strategyName = "WilliamsRStrategy";
     private int period = 14;
 
     public String predict(double[] highPrices, double[] lowPrices, double[] closePrices) {
@@ -16,6 +17,7 @@ public class WilliamsRStrategy implements Strategy {
         return signals.get(closePrices.length-1);
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
@@ -29,10 +31,15 @@ public class WilliamsRStrategy implements Strategy {
         }
 
         return StrategyVO.builder()
-            .strategyName("WilliamsRStrategy")
+            .strategyName(strategyName)
             .action(predict(highPrices, lowPrices, closePrices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

@@ -9,6 +9,7 @@ import java.util.List;
 
 public class CCIAndPSYStrategy implements Strategy {
 
+    private String strategyName = "CCIAndPSYStrategy";
     private int psyPeriod = 12;
     private double psyBuyThreshold = 25;
     private double psySellThreshold = 75;
@@ -18,16 +19,22 @@ public class CCIAndPSYStrategy implements Strategy {
         return psySignals.get(Math.min(prices.length-1, psySignals.size() -1));
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
 
         return StrategyVO.builder()
-            .strategyName("CCIAndPSYStrategy")
+            .strategyName(strategyName)
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

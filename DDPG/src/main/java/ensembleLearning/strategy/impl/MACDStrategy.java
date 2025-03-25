@@ -9,6 +9,7 @@ import java.util.List;
 
 public class MACDStrategy implements Strategy {
 
+    private String strategyName = "MACDStrategy";
     private int fastPeriod = 12;
     private int slowPeriod = 26;
     private int signalPeriod = 9;
@@ -19,16 +20,22 @@ public class MACDStrategy implements Strategy {
         return signals.get(Math.min(prices.length-1,signals.size()-1));
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
 
         return StrategyVO.builder()
-            .strategyName("MACDStrategy")
+            .strategyName(strategyName)
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

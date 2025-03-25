@@ -8,13 +8,15 @@ import feature.OBVTrading;
 import java.util.List;
 
 public class OBVStrategy implements Strategy { // 2
-//public class OBVStrategy {
+
+    private String strategyName = "OBVStrategy";
 
     public String predict(double[] closePrices, double[]  volumes) {
         List<String> signals = OBVTrading.generateSignals(closePrices, volumes);
         return signals.get(closePrices.length-1);
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] closePrices = new double[quoteVOList.size()];
         double[] volumes = new double[quoteVOList.size()];
@@ -26,10 +28,15 @@ public class OBVStrategy implements Strategy { // 2
         }
 
         return StrategyVO.builder()
-            .strategyName("OBVStrategy")
+            .strategyName(strategyName)
             .action(predict(closePrices, volumes))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

@@ -8,4 +8,5 @@ import java.util.List;
 public interface Strategy {
 
     StrategyVO predict(List<QuoteVO> quoteVOList);
+    String getStrategyName();
 }

@@ -2,19 +2,20 @@ package ensembleLearning.strategy.impl;
 
 import binace.vo.QuoteVO;
 import ensembleLearning.strategy.Strategy;
+import ensembleLearning.strategy.vo.HighLowTradingVO;
 import ensembleLearning.strategy.vo.StrategyVO;
-import feature.BiasRatioTrading;
-import feature.HighLowTrading;
+import feature.HighLowLongTrading;
+import feature.HighLowMiddleTrading;
 
 import java.util.List;
 
-public class HighLowStrategy implements Strategy {
+public class HighLowMiddleStrategy implements Strategy {
 
-    private String strategyName = "HighLowStrategy";
+    private String strategyName = "HighLowMiddleStrategy";
 
-    public String predict(double[] prices) {
+    private HighLowTradingVO predict(double[] prices) {
         // 生成交易信號
-        String signals = HighLowTrading.generateSignals(prices);
+        HighLowTradingVO signals = HighLowMiddleTrading.generateSignals(prices);
         return signals;
     }
 
@@ -24,9 +25,12 @@ public class HighLowStrategy implements Strategy {
                 .mapToDouble(o -> o.getClose().doubleValue())
                 .toArray();
 
+        HighLowTradingVO vo = predict(prices);
+
         return StrategyVO.builder()
                 .strategyName(strategyName)
-                .action(predict(prices))
+                .action(vo.getAction())
+                .weight(vo.getWeight())
                 .closeTime(quoteVOList.getLast().getCloseTime())
                 .build();
     }

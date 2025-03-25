@@ -9,6 +9,7 @@ import java.util.List;
 
 public class EMAStrategy implements Strategy {
 
+    private String strategyName = "EMAStrategy";
     private int shortPeriod = 5;
     private int longPeriod = 12;
 
@@ -18,16 +19,22 @@ public class EMAStrategy implements Strategy {
         return signals.get(prices.length-1);
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
 
         return StrategyVO.builder()
-            .strategyName("EMAStrategy")
+            .strategyName(strategyName)
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

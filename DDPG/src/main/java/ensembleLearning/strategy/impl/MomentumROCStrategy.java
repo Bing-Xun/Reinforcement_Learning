@@ -8,8 +8,8 @@ import feature.MomentumROCTrading;
 import java.util.List;
 
 public class MomentumROCStrategy implements Strategy { // 2
-//public class MomentumROCStrategy {
 
+    private String strategyName = "MomentumROCStrategy";
     private int period = 10;
 
     public String predict(double[] prices) {
@@ -23,16 +23,22 @@ public class MomentumROCStrategy implements Strategy { // 2
         return mtmAction.equals(rocAction) ? mtmAction : "N/A"; // 若兩個動作相等則回傳, 不等回傳 N/A
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] prices = quoteVOList.stream()
             .mapToDouble(o -> o.getClose().doubleValue())
             .toArray();
 
         return StrategyVO.builder()
-            .strategyName("MomentumROCStrategy")
+            .strategyName(strategyName)
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

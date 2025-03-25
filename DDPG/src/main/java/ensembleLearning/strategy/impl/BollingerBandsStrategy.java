@@ -9,6 +9,7 @@ import java.util.List;
 
 public class BollingerBandsStrategy implements Strategy {
 
+    private String strategyName = "BollingerBandsStrategy";
     private int period = 20;
     private double k = 2.0; // 標準差倍數
 
@@ -23,10 +24,15 @@ public class BollingerBandsStrategy implements Strategy {
             .toArray();
 
         return StrategyVO.builder()
-            .strategyName("BollingerBandsStrategy")
+            .strategyName(strategyName)
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

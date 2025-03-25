@@ -10,12 +10,14 @@ import java.util.List;
 //public class DonchianChannelStrategy implements Strategy {
 public class DonchianChannelStrategy {
 
+    private String strategyName = "EMAStrategy";
     private int period = 20;
 
     public String predict(double[] highPrices, double[] lowPrices, double[] closePrices) {
         List<String> signals = DonchianChannelTrading.generateSignals(highPrices, lowPrices, closePrices, period);
         return signals.get(closePrices.length-1);
     }
+
 
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
@@ -34,6 +36,10 @@ public class DonchianChannelStrategy {
             .action(predict(highPrices, lowPrices, closePrices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

@@ -84,7 +84,7 @@ public class MultiStrategyEnsemble {
         MultiStrategyEnsemble ensemble = new MultiStrategyEnsemble();
         // 動態加載所有策略
 //        List<Strategy> strategies = loadStrategies();
-//        List<Strategy> strategies = List.of(new HighLowStrategy()); // holdCnt:5270 sellCnt:1589 buyCnt:1890
+        List<Strategy> strategies = List.of(new HighLowStrategy()); // holdCnt:5270 sellCnt:1589 buyCnt:1890
 //        List<Strategy> strategies = List.of(new BollingerBandsStrategy()); // holdCnt:6573 sellCnt:1003 buyCnt:1173
 //        List<Strategy> strategies = List.of(new CCIAndPSYStrategy()); // holdCnt:7608 sellCnt:203 buyCnt:938
 //        List<Strategy> strategies = List.of(new ChaikinOscillatorStrategy()); // holdCnt:7151 sellCnt:803 buyCnt:795
@@ -105,12 +105,12 @@ public class MultiStrategyEnsemble {
 //                , new WilliamsRStrategy()
 //        );
 
-        List<Strategy> strategies = List.of(
-                new HighLowStrategy()
-                , new EMAStrategy()
-                , new MACDStrategy()
-                , new RSIStrategy()
-        );
+//        List<Strategy> strategies = List.of(
+//                new HighLowStrategy()
+//                , new EMAStrategy()
+//                , new MACDStrategy()
+//                , new RSIStrategy()
+//        );
 
 
         Position position = new Position();
@@ -121,7 +121,7 @@ public class MultiStrategyEnsemble {
         int holdCnt = 0;
         int sellCnt = 0;
         int buyCnt = 0;
-        int tickI = 30;
+        int tickI = 300;
         for(int i=tickI; i<quoteVOList.size(); i++) {
             List<QuoteVO> subList = quoteVOList.subList(i-tickI, i);
             BigDecimal price = subList.getLast().getClose();
@@ -144,7 +144,7 @@ public class MultiStrategyEnsemble {
             if("BUY".equals(action)) {
 //                position.modifyPosition(price, 0.0008, 0);
                 if(Math.abs(price.doubleValue() - position.getPrice().doubleValue()) > price.doubleValue() * 0.05) {
-                    position.modifyPosition(price, getTradePosition(price, new BigDecimal(1000)), 0);
+                    position.modifyPosition(price, getBuyTradePosition(price, new BigDecimal(1000)), 0);
                     buyCnt++;
                 } else {
                     action = "HOLD";
@@ -154,7 +154,7 @@ public class MultiStrategyEnsemble {
             if("SELL".equals(action)) {
 //                position.modifyPosition(price, 0.0008, 1);
                 if(Math.abs(price.doubleValue() - position.getPrice().doubleValue()) > price.doubleValue() * 0.05) {
-                    position.modifyPosition(price, getTradePosition(price, new BigDecimal(1000)), 1);
+                    position.modifyPosition(price, getSellTradePosition(price, new BigDecimal(1000)), 1);
                     sellCnt++;
                 } else {
                     action = "HOLD";
@@ -179,8 +179,8 @@ public class MultiStrategyEnsemble {
                 price
                 , new BigDecimal(position.getPositionCnt())
                 , subList.getLast().getCloseTime()
-                , action.equals("HOLD") ? "" : actionVO.getAction() + ":" + actionVO.getCloseTime());
-//                , "");
+//                , action.equals("HOLD") ? "" : actionVO.getAction() + ":" + actionVO.getCloseTime());
+                , "");
 
             dataPoints.add(dataPoint);
 
@@ -210,7 +210,11 @@ public class MultiStrategyEnsemble {
 //        return list.subList(list.size() - 20000, list.size() - 10000);
     }
 
-    private static Double getTradePosition(BigDecimal price, BigDecimal initAmount) {
-        return initAmount.doubleValue() * 0.01 / price.doubleValue();
+    private static Double getBuyTradePosition(BigDecimal price, BigDecimal initAmount) {
+        return initAmount.doubleValue() * 0.25 / price.doubleValue();
+    }
+
+    private static Double getSellTradePosition(BigDecimal price, BigDecimal initAmount) {
+        return initAmount.doubleValue() * 0.25 / price.doubleValue();
     }
 }

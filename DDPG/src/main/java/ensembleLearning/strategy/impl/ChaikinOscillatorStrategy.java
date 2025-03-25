@@ -10,6 +10,8 @@ import java.util.List;
 public class ChaikinOscillatorStrategy implements Strategy {  // 2
 //public class ChaikinOscillatorStrategy {
 
+    private String strategyName = "ChaikinOscillatorStrategy";
+
     private int fastPeriod = 3;
     private int slowPeriod = 10;
     private int maPeriod = 9; // 用於判斷突破的移動平均線週期
@@ -34,10 +36,15 @@ public class ChaikinOscillatorStrategy implements Strategy {  // 2
         }
 
         return StrategyVO.builder()
-            .strategyName("ChaikinOscillatorStrategy")
+            .strategyName(strategyName)
             .action(predict(highPrices, lowPrices, closePrices, volumes))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

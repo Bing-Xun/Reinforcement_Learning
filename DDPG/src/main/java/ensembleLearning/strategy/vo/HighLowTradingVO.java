@@ -5,10 +5,8 @@ import lombok.Data;
 
 @Builder
 @Data
-public class StrategyVO {
+public class HighLowTradingVO {
 
-    private String strategyName;
     private String action;
     private Integer weight;
-    private Long closeTime;
 }

@@ -9,6 +9,7 @@ import java.util.List;
 
 public class StochasticOscillatorStrategy implements Strategy {
 
+    private String strategyName = "StochasticOscillatorStrategy";
     private int kPeriod = 9;
     private int dPeriod = 3;
     private int slowing = 3; // 1 for fast stochastic, > 1 for slow stochastic
@@ -18,6 +19,7 @@ public class StochasticOscillatorStrategy implements Strategy {
         return signals.get(closePrices.length-1);
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
@@ -31,10 +33,15 @@ public class StochasticOscillatorStrategy implements Strategy {
         }
 
         return StrategyVO.builder()
-            .strategyName("StochasticOscillatorStrategy")
+            .strategyName(strategyName)
             .action(predict(highPrices, lowPrices, closePrices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

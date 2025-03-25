@@ -10,7 +10,7 @@ import java.util.List;
 //public class BiasRatioStrategy implements Strategy {
 public class BiasRatioStrategy {
 
-
+    private String strategyName = "BiasRatioStrategy";
     private int period = 12;
     private double buyThreshold = -4; // 根據市場情況和回測調整
     private double sellThreshold = 4;  // 根據市場情況和回測調整
@@ -31,6 +31,10 @@ public class BiasRatioStrategy {
             .action(predict(prices))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {

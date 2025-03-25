@@ -8,7 +8,8 @@ import feature.ParabolicSARTrading;
 import java.util.List;
 
 public class ParabolicSARStrategy implements Strategy { // 2
-//public class ParabolicSARStrategy {
+
+    private String strategyName = "ParabolicSARStrategy";
 
     private double afStart = 0.02;
     private double afIncrement = 0.02;
@@ -19,6 +20,7 @@ public class ParabolicSARStrategy implements Strategy { // 2
         return signals.get(Math.min(highPrices.length-1, signals.size()-1));
     }
 
+    @Override
     public StrategyVO predict(List<QuoteVO> quoteVOList) {
         double[] highPrices = new double[quoteVOList.size()];
         double[] lowPrices = new double[quoteVOList.size()];
@@ -32,10 +34,15 @@ public class ParabolicSARStrategy implements Strategy { // 2
         }
 
         return StrategyVO.builder()
-            .strategyName("ParabolicSARStrategy")
+            .strategyName(strategyName)
             .action(predict(closePrices, volumes))
             .closeTime(quoteVOList.getLast().getCloseTime())
             .build();
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 
     public static void main(String[] args) {
