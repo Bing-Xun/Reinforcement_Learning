@@ -33,15 +33,15 @@ public class JsonFileExample {
 //        List<QuoteEntity> list = getQuoteList("quote_btc_1m", quoteCnt);
 //        String filePath = "DDPG/data_btc_1m.json";
 
-//        int quoteCnt = 1000;
+//        int quoteCnt = 39709;
 //        List<QuoteEntity> list = getQuoteList("quote_paxg_1m", quoteCnt);
 //        String filePath = "DDPG/data_paxg_1m.json";
 
-//        int quoteCnt = 1000;
+//        int quoteCnt = 37731;
 //        List<QuoteEntity> list = getQuoteList("quote_xrp_1m", quoteCnt);
 //        String filePath = "DDPG/data_xrp_1m.json";
 
-        int quoteCnt = 1000;
+        int quoteCnt = 37731;
         List<QuoteEntity> list = getQuoteList("quote_link_1m", quoteCnt);
         String filePath = "DDPG/data_link_1m.json";
 

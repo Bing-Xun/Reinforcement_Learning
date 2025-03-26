@@ -35,7 +35,7 @@ public class StrategyEnsemble {
         ActionService ensembleAction = new ActionService();
         EarnService earnService = new EarnService(initAmount);
 
-        int tickI = 720;
+        int tickI = 14400;
         for(int i=tickI; i<quoteVOList.size(); i++) {
             List<QuoteVO> subQuoteVOList = quoteVOList.subList(i-tickI, i);
             BigDecimal price = subQuoteVOList.getLast().getClose();
@@ -102,9 +102,9 @@ public class StrategyEnsemble {
 
     private static List<QuoteVO> getDataList() throws Exception {
 //        String filePath = "DDPG/data_btc_1m.json";
-//        String filePath = "DDPG/data_paxg_1m.json";
+        String filePath = "DDPG/data_paxg_1m.json";
 //        String filePath = "DDPG/data_xrp_1m.json";
-        String filePath = "DDPG/data_link_1m.json";
+//        String filePath = "DDPG/data_link_1m.json";
 //        String filePath = "DDPG/data1h.json";
 
         ObjectMapper objectMapper = new ObjectMapper();
