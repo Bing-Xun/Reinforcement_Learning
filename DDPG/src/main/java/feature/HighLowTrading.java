@@ -1,36 +1,39 @@
 package feature;
 
+import ensembleLearning.util.HighLowStrategyUtil;
+import ensembleLearning.strategy.vo.HighLowTradingVO;
+
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class HighLowTrading {
 
-    public static String generateSignals(double[] closePrices) {
+    public static HighLowTradingVO generateSignals(double[] closePrices) {
         List<Double> closePricesList = Arrays.stream(closePrices)
                 .boxed() // 將 double 轉換為 Double
                 .collect(java.util.stream.Collectors.toList());
 
+        Double perD = closePrices[closePrices.length-1];
+        List<Double> decileList = HighLowStrategyUtil.calculatePercentiles(closePricesList);
+        int decile = HighLowStrategyUtil.getPercentile(perD, decileList);
 
-        Double indexD = closePrices[closePrices.length-1];
-        // 對 List<Double> 進行排序
-        Collections.sort(closePricesList); // 預設為升序排序
-        int index = closePricesList.indexOf(indexD);
+        String action = "HOLD";
+        Integer weight = 1;
 
-        String signals = "HOLD";
-        if(index >= 0.8 * closePricesList.size()) {
-            signals = "SELL";
+        if(decile > 85) {
+            action = "SELL";
+            weight = 2;
         }
-        if(index <= 0.2 * closePricesList.size() && index >= 0.05 * closePricesList.size()) {
-            signals = "BUY";
+        if(decile <= 10) {
+            action = "BUY";
+            weight = 2;
         }
 
-        return signals;
+        return HighLowTradingVO.builder()
+            .action(action)
+            .weight(weight)
+            .build();
     }
-
-//    public static List<String> generateSignals(double[] close) {
-//
-//    }
 
     public static void main(String[] args) {
         // 示例數據

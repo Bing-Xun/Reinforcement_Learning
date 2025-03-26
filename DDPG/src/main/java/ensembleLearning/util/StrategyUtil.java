@@ -1,4 +1,4 @@
-package ensembleLearning.strategy.util;
+package ensembleLearning.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ensembleLearning.strategy.vo.ActionVO;

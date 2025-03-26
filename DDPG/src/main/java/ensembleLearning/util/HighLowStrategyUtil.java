@@ -1,4 +1,4 @@
-package ensembleLearning.strategy.util;
+package ensembleLearning.util;
 
 import java.util.ArrayList;
 import java.util.Collections;

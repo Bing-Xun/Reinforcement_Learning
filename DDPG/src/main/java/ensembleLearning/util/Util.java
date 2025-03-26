@@ -1,4 +1,4 @@
-package ensembleLearning.strategy.util;
+package ensembleLearning.util;
 
 import ensembleLearning.strategy.Strategy;
 import org.reflections.Reflections;

@@ -1,7 +1,7 @@
 package feature;
 
-import ensembleLearning.strategy.util.HighLowStrategyUtil;
-import ensembleLearning.strategy.util.StrategyUtil;
+import ensembleLearning.util.HighLowStrategyUtil;
+import ensembleLearning.util.StrategyUtil;
 import ensembleLearning.strategy.vo.HighLowTradingVO;
 
 import java.util.Arrays;
@@ -55,22 +55,16 @@ public class TrendTrading {
                 .boxed() // 將 double 轉換為 Double
                 .collect(java.util.stream.Collectors.toList());
 
-//            List<Double> subList = list.subList(list.size() / 3, list.size());
-//            List<Double> subDecileList = HighLowStrategyUtil.calculatePercentiles(subList);
-//            int subDecile = HighLowStrategyUtil.getPercentile(indexD, subDecileList);
+            int middleIndex = closePricesList.size() / 2; // 計算中間索引
+            List<Double> preClosePricesList = closePricesList.subList(0, middleIndex); // 取得前半部分的子列表
+            List<Double> sufClosePricesList = closePricesList.subList(middleIndex, closePricesList.size()); // 取得後半部分的子列表
+            double preSD = StrategyUtil.calculateStandardDeviation(preClosePricesList);
+            double sufSD = StrategyUtil.calculateStandardDeviation(sufClosePricesList);
 
-//            if(subDecile < 10) {
-                int middleIndex = closePricesList.size() / 2; // 計算中間索引
-                List<Double> preClosePricesList = closePricesList.subList(0, middleIndex); // 取得前半部分的子列表
-                List<Double> sufClosePricesList = closePricesList.subList(middleIndex, closePricesList.size()); // 取得後半部分的子列表
-                double preSD = StrategyUtil.calculateStandardDeviation(preClosePricesList);
-                double sufSD = StrategyUtil.calculateStandardDeviation(sufClosePricesList);
-
-                if(preSD < sufSD) {
-                    action = "HOLD";
-                    weight = 5;
-                }
-//            }
+            if(preSD < sufSD) {
+                action = "HOLD";
+                weight = 5;
+            }
         }
 
         return HighLowTradingVO.builder()
