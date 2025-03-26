@@ -25,17 +25,25 @@ public class JsonFileExample {
 //        List<QuoteEntity> list = getQuoteList("quote_btc_3m", quoteCnt);
 //        String filePath = "DDPG/data3m.json";
 
-//        int quoteCnt = 24416;
-//        List<QuoteEntity> list = getQuoteList("quote_btc_5m", quoteCnt);
-//        String filePath = "DDPG/data5m.json";
+//        int quoteCnt = 3105;
+//        List<QuoteEntity> list = getQuoteList("quote_btc_1h", quoteCnt);
+//        String filePath = "DDPG/data1h.json";
 
-//        int quoteCnt = 9418;
-//        List<QuoteEntity> list = getQuoteList("quote_btc_15m", quoteCnt);
-//        String filePath = "DDPG/data15m.json";
+//        int quoteCnt = 112437;
+//        List<QuoteEntity> list = getQuoteList("quote_btc_1m", quoteCnt);
+//        String filePath = "DDPG/data_btc_1m.json";
 
-        int quoteCnt = 3105;
-        List<QuoteEntity> list = getQuoteList("quote_btc_1h", quoteCnt);
-        String filePath = "DDPG/data1h.json";
+//        int quoteCnt = 1000;
+//        List<QuoteEntity> list = getQuoteList("quote_paxg_1m", quoteCnt);
+//        String filePath = "DDPG/data_paxg_1m.json";
+
+//        int quoteCnt = 1000;
+//        List<QuoteEntity> list = getQuoteList("quote_xrp_1m", quoteCnt);
+//        String filePath = "DDPG/data_xrp_1m.json";
+
+        int quoteCnt = 1000;
+        List<QuoteEntity> list = getQuoteList("quote_link_1m", quoteCnt);
+        String filePath = "DDPG/data_link_1m.json";
 
         // 創建 ObjectMapper 實例
         ObjectMapper objectMapper = new ObjectMapper();
