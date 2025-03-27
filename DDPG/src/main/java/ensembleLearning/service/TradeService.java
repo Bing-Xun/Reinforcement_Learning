@@ -17,24 +17,55 @@ public class TradeService {
         this.initAmount = initAmount;
     }
 
-    public void trade(String action, BigDecimal price, Position position) {
-        if("BUY".equals(action)) {
-            if(Math.abs(price.doubleValue() - buyPrice.doubleValue()) > price.doubleValue() * 0.015) {
-                if(position.getAmount().doubleValue() > getBuyTradePosition(price, initAmount) * price.doubleValue()) {
-                    position.modifyPosition(price, getBuyTradePosition(price, initAmount), 0);
-                    setTradeVolume(action, price);
-                }
-            }
+    public String getAction(String strategyAction, BigDecimal price, Position position) throws Exception {
+        String action = strategyAction;
+
+        if("BUY".equals(strategyAction)) {
+            action = checkBuyAction(price, position) ? "BUY" : "HOLD";
         }
 
         if("SELL".equals(action)) {
-            if(Math.abs(price.doubleValue() - sellPrice.doubleValue()) > price.doubleValue() * 0.015) {
-                if(position.getPositionCnt() > 0.0) {
-                    position.modifyPosition(price, position.getPositionCnt(), 1);
-                    setTradeVolume(action, price);
-                }
+            action = checkSellAction(price, position) ? "SELL" : "HOLD";
+        }
+
+        return action;
+    }
+
+    public void trade(String action, BigDecimal price, Position position) {
+        if("BUY".equals(action) && checkBuyAction(price, position)) {
+            position.modifyPosition(price, getBuyTradePosition(price, initAmount), 0);
+            setTradeVolume(action, price);
+        }
+
+        if("SELL".equals(action) && checkSellAction(price, position)) {
+            Double positionCnt = position.getPositionCnt();
+            Double priceD = price.doubleValue();
+            boolean isPCntOver = positionCnt * priceD > initAmount.doubleValue() / 3;
+            Double sellVolume = isPCntOver ? positionCnt / 4 : positionCnt;
+
+            position.modifyPosition(price, sellVolume, 1);
+            setTradeVolume(action, price);
+        }
+    }
+
+    private boolean checkBuyAction(BigDecimal price, Position position) {
+        boolean b = false;
+        if(Math.abs(price.doubleValue() - buyPrice.doubleValue()) > price.doubleValue() * 0.015) {
+            if(position.getAmount().doubleValue() > getBuyTradePosition(price, initAmount) * price.doubleValue()) {
+                b = true;
             }
         }
+        return b;
+    }
+
+    private boolean checkSellAction(BigDecimal price, Position position) {
+        boolean b = false;
+        if(Math.abs(price.doubleValue() - sellPrice.doubleValue()) > price.doubleValue() * 0.015) {
+            if(position.getPositionCnt() > 0.0) {
+                b = true;
+            }
+        }
+        return b;
     }
 
     private void setTradeVolume(String action, BigDecimal price) {
@@ -54,13 +85,5 @@ public class TradeService {
     private Double getBuyTradePosition(BigDecimal price, BigDecimal initAmount) {
         double rate = buyRate + ((rateTick * (buySellCnt < 0 ? 0 : buySellCnt)));
         return initAmount.doubleValue() * rate / price.doubleValue();
-    }
-
-    public BigDecimal getBuyPrice() {
-        return this.buyPrice;
-    }
-
-    public BigDecimal getSellPrice() {
-        return this.sellPrice;
     }
 }

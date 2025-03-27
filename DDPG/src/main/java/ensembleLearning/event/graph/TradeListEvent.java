@@ -8,13 +8,13 @@ import java.util.List;
 
 @Builder
 @Data
-public class GraphEvent {
+public class TradeListEvent {
 
-    private List<GraphEventVO> graphEventVOList;
+    private List<TradeVO> graphEventVOList;
 
     @Builder
     @Data
-    public static class GraphEventVO {
+    public static class TradeVO {
         private String action;
         private Long closeTime;
         private BigDecimal price;
