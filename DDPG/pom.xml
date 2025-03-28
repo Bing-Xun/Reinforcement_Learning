@@ -94,5 +94,14 @@
             <artifactId>guava</artifactId>
             <version>33.0.0-jre</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.binance</groupId>
+            <artifactId>connector</artifactId>
+            <version>3.0.0rc1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/binance-connector-java-3.4.1.jar</systemPath>
+        </dependency>
+
     </dependencies>
 </project>
