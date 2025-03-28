@@ -9,6 +9,7 @@ target/
 build/
 
 config.properties
+binace.properties
 
 # too large
 *data_link_1m.json
