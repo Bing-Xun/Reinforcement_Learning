@@ -93,9 +93,9 @@ public class StrategyEnsemble {
     }
 
     private static List<QuoteVO> getDataList() throws Exception {
-        String filePath = "DDPG/data_btc_1m.json";
+//        String filePath = "DDPG/data_btc_1m.json";
 //        String filePath = "DDPG/data_paxg_1m.json";
-//        String filePath = "DDPG/data_xrp_1m.json";
+        String filePath = "DDPG/data_xrp_1m.json";
 //        String filePath = "DDPG/data_link_1m.json";
 //        String filePath = "DDPG/data1h.json";
 

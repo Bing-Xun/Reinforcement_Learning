@@ -1,0 +1,17 @@
+*.class
+
+.idea/
+*.iml
+
+.DS_Store
+
+target/
+build/
+
+config.properties
+
+# too large
+*data_link_1m.json
+*data_paxg_1m.json
+*data_xrp_1m.json
+
