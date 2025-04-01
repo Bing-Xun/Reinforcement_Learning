@@ -113,11 +113,11 @@ public class Trade {
     }
 
     public static void main(String[] args) throws Exception {
-        // 获取账户信息
+//        // 获取账户信息
 //        AccountRes accountRes = Trade.account();
 //        System.out.println(accountRes);
-
-        // 创建订单
+//
+//        // 创建订单
 //        NewOrderReq newOrderReq = NewOrderReq.builder()
 //            .symbol("BTCUSDT")
 //            .side(OrderSide.BUY)
@@ -128,19 +128,20 @@ public class Trade {
 //        Trade.newOrder(newOrderReq);
 //        NewOrderRes newOrderRes = Trade.newOrder(newOrderReq);
 //        System.out.println(newOrderRes);
-
-        // 查询订单
+//
+//        // 查询订单
 //        GetOrderRes getOrderRes = Trade.getOrder("BTCUSDT", "11935967");
 //        System.out.println(getOrderRes);
-
-        // 查詢未成交訂單
-//        List<GetOpenOrders> list = getOpenOrders("BTCUSDT");
+//
+//        // 查詢未成交訂單
+////        List<GetOpenOrders> list = getOpenOrders("BTCUSDT");
 //        List<GetOpenOrders> list = getOpenOrders(null);
 //        System.out.println(list);
-
-        // 取消掛單
-//        cancelOrder("BTCUSDT", 12738294L);
-
+//
+//        // 取消掛單
+////        cancelOrder("BTCUSDT", 12738294L);
+//
+//        // 取消掛單
 //        List<CancelOpenOrderRes> cancelOpenOrderResList = cancelOpenOrders("BTCUSDT");
 //        System.out.println(cancelOpenOrderResList);
     }
