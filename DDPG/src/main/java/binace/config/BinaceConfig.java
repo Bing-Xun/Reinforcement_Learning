@@ -6,17 +6,17 @@ import java.util.Properties;
 
 public class BinaceConfig {
 
-    public static String BASE_Url;
+    public static String BASE_URL;
     public static String API_KEY;
     public static String SECRET_KEY;
 
     static {
-        Properties config = ConfigReader.loadConfig("binace.properties");
+        Properties config = ConfigReader.loadConfig("config.properties");
 
         if (config != null) {
-            BASE_Url = config.getProperty("BASE_Url");
-            API_KEY = config.getProperty("API_KEY");
-            SECRET_KEY = config.getProperty("SECRET_KEY");
+            BASE_URL = config.getProperty("binace.baseurl");
+            API_KEY = config.getProperty("binace.apikey");
+            SECRET_KEY = config.getProperty("binace.secretkey");
         }
     }
 }

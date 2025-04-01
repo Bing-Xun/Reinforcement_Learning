@@ -8,5 +8,5 @@ public class BinaceClient {
     public static final SpotClientImpl client = new SpotClientImpl(
         BinaceConfig.API_KEY
         , BinaceConfig.SECRET_KEY
-        , BinaceConfig.BASE_Url);
+        , BinaceConfig.BASE_URL);
 }
